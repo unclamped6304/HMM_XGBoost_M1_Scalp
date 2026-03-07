@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="SqlDialectMappings">
+    <file url="file://$PROJECT_DIR$/ddl/historicalData/EURUSD/d1.sql" dialect="PostgreSQL" />
+    <file url="file://$PROJECT_DIR$/ddl/historicalData/EURUSD/h1.sql" dialect="PostgreSQL" />
+    <file url="file://$PROJECT_DIR$/ddl/historicalData/EURUSD/h4.sql" dialect="PostgreSQL" />
+    <file url="file://$PROJECT_DIR$/ddl/historicalData/EURUSD/m15.sql" dialect="PostgreSQL" />
+    <file url="file://$PROJECT_DIR$/ddl/historicalData/EURUSD/m30.sql" dialect="PostgreSQL" />
+    <file url="file://$PROJECT_DIR$/ddl/historicalData/EURUSD/m5.sql" dialect="PostgreSQL" />
+    <file url="file://$PROJECT_DIR$/ddl/historicalData/GBPUSD/d1.sql" dialect="PostgreSQL" />
+    <file url="file://$PROJECT_DIR$/ddl/historicalData/GBPUSD/h1.sql" dialect="PostgreSQL" />
+    <file url="file://$PROJECT_DIR$/ddl/historicalData/GBPUSD/h4.sql" dialect="PostgreSQL" />
+    <file url="file://$PROJECT_DIR$/ddl/historicalData/GBPUSD/m1.sql" dialect="PostgreSQL" />
+    <file url="file://$PROJECT_DIR$/ddl/historicalData/GBPUSD/m15.sql" dialect="PostgreSQL" />
+    <file url="file://$PROJECT_DIR$/ddl/historicalData/GBPUSD/m30.sql" dialect="PostgreSQL" />
+    <file url="file://$PROJECT_DIR$/ddl/historicalData/GBPUSD/m5.sql" dialect="PostgreSQL" />
+    <file url="PROJECT" dialect="PostgreSQL" />
+  </component>
+</project>
