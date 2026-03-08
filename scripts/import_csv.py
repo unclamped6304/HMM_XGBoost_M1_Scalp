@@ -29,10 +29,11 @@ BATCH_SIZE = 10_000
 
 def resolve_table(filepath):
     name = os.path.basename(filepath)
-    # Extract pair and timeframe from filename, e.g. GBPUSD_..._M1.csv
-    parts = name.replace(".csv", "").split("_")
-    pair = parts[0].lower()          # e.g. gbpusd
-    timeframe = parts[-1].lower()    # e.g. m1, h4, d1
+    # Split on _GMT+2_ to reliably separate symbol from the rest
+    # e.g. "GBPUSD_GMT+2_US-DST_M1.csv" or "Natural_Gas_GMT+2_US-DST_M1.csv"
+    symbol_part, rest = name.split("_GMT+2_", 1)
+    pair = symbol_part.lower()               # e.g. gbpusd, natural_gas
+    timeframe = rest.replace(".csv", "").split("_")[-1].lower()  # e.g. m1, h4, d1
     return f"{pair}_{timeframe}"
 
 def import_file(filepath):
