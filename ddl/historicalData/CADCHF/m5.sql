@@ -1,4 +1,4 @@
-CREATE TABLE cadchf_m5 (
+CREATE TABLE "historicalData".cadchf_m5 (
                            date        DATE        NOT NULL,
                            time        TIME        NOT NULL,
                            open        NUMERIC(10, 5) NOT NULL,
@@ -9,6 +9,6 @@ CREATE TABLE cadchf_m5 (
                            PRIMARY KEY (date, time)
 );
 
-CREATE INDEX idx_cadchf_m5_date ON cadchf_m5 (date);
-COMMENT ON TABLE cadchf_m5 IS '5-minute OHLC bar data. Timezone: GMT+2 with US DST applied. Source: Dukascopy export from Tick Data Suite.';
+CREATE INDEX idx_cadchf_m5_date ON "historicalData".cadchf_m5 (date);
+COMMENT ON TABLE "historicalData".cadchf_m5 IS '5-minute OHLC bar data. Timezone: GMT+2 with US DST applied. Source: Dukascopy export from Tick Data Suite.';
 /* date,time,open,high,low,close,tick_volume */

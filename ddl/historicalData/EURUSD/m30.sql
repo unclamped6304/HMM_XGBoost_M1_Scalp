@@ -1,4 +1,4 @@
-CREATE TABLE eurusd_m30 (
+CREATE TABLE "historicalData".eurusd_m30 (
                            date        DATE        NOT NULL,
                            time        TIME        NOT NULL,
                            open        NUMERIC(10, 5) NOT NULL,
@@ -9,6 +9,6 @@ CREATE TABLE eurusd_m30 (
                            PRIMARY KEY (date, time)
 );
 
-CREATE INDEX idx_eurusd_m30_date ON eurusd_m30 (date);
-COMMENT ON TABLE eurusd_m30 IS '30-minute OHLC bar data. Timezone: GMT+2 with US DST applied. Source: Dukascopy export from Tick Data Suite.';
+CREATE INDEX idx_eurusd_m30_date ON "historicalData".eurusd_m30 (date);
+COMMENT ON TABLE "historicalData".eurusd_m30 IS '30-minute OHLC bar data. Timezone: GMT+2 with US DST applied. Source: Dukascopy export from Tick Data Suite.';
 /* date,time,open,high,low,close,tick_volume */

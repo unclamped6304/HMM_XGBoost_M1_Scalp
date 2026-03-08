@@ -1,4 +1,4 @@
-CREATE TABLE gbpusd_h1 (
+CREATE TABLE "historicalData".gbpusd_h1 (
                            date        DATE        NOT NULL,
                            time        TIME        NOT NULL,
                            open        NUMERIC(10, 5) NOT NULL,
@@ -9,6 +9,6 @@ CREATE TABLE gbpusd_h1 (
                            PRIMARY KEY (date, time)
 );
 
-CREATE INDEX idx_gbpusd_h1_date ON gbpusd_h1 (date);
-COMMENT ON TABLE gbpusd_h1 IS '1-hour OHLC bar data. Timezone: GMT+2 with US DST applied. Source: Dukascopy export from Tick Data Suite.';
+CREATE INDEX idx_gbpusd_h1_date ON "historicalData".gbpusd_h1 (date);
+COMMENT ON TABLE "historicalData".gbpusd_h1 IS '1-hour OHLC bar data. Timezone: GMT+2 with US DST applied. Source: Dukascopy export from Tick Data Suite.';
 /* date,time,open,high,low,close,tick_volume */

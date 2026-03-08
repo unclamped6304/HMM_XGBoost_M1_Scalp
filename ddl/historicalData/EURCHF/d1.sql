@@ -1,4 +1,4 @@
-CREATE TABLE eurchf_d1 (
+CREATE TABLE "historicalData".eurchf_d1 (
                            date        DATE        NOT NULL,
                            time        TIME        NOT NULL,
                            open        NUMERIC(10, 5) NOT NULL,
@@ -9,6 +9,6 @@ CREATE TABLE eurchf_d1 (
                            PRIMARY KEY (date, time)
 );
 
-CREATE INDEX idx_eurchf_d1_date ON eurchf_d1 (date);
-COMMENT ON TABLE eurchf_d1 IS '1-day OHLC bar data. Timezone: GMT+2 with US DST applied. Source: Dukascopy export from Tick Data Suite.';
+CREATE INDEX idx_eurchf_d1_date ON "historicalData".eurchf_d1 (date);
+COMMENT ON TABLE "historicalData".eurchf_d1 IS '1-day OHLC bar data. Timezone: GMT+2 with US DST applied. Source: Dukascopy export from Tick Data Suite.';
 /* date,time,open,high,low,close,tick_volume */
