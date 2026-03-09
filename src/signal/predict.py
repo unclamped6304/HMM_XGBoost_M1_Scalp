@@ -46,7 +46,7 @@ import joblib
 import numpy as np
 import pandas as pd
 
-from src.hmm.features import load_bars, _compute_ohlcv_features
+from src.hmm.features import load_bars, _compute_ohlcv_features  # load_bars used in predict_live
 from src.hmm.regime import RegimeLookup
 from src.signal.label import ATR_MULT, DEFAULT_MULT, _atr, _spread
 from src.signal.train import FEATURE_COLS, MODELS_DIR
@@ -69,6 +69,7 @@ class SignalEngine:
     def __init__(self):
         self._models:        dict[str, dict[int, object]] = {}  # symbol -> {regime -> model}
         self._feature_cache: dict[str, pd.DataFrame]      = {}  # symbol -> full feature df
+        self._close_cache:   dict[str, pd.Series]         = {}  # symbol -> H1 close series
         self._regime_lookup: RegimeLookup | None          = None
 
     # ── Lazy loaders ──────────────────────────────────────────────────────────
@@ -112,6 +113,7 @@ class SignalEngine:
             features["base_regime"]  = regime_hist["base_regime"].values
             features["quote_regime"] = regime_hist["quote_regime"].values
             features["atr_raw"]      = atr.values
+            features["close_price"]  = bars["close"].reindex(idx).values
 
             self._feature_cache[symbol] = features
         return self._feature_cache[symbol]
@@ -190,11 +192,8 @@ class SignalEngine:
         regime = int(row["h4_regime"])
         X      = row[FEATURE_COLS].values.astype(np.float32)
 
-        # Recover approximate entry price from features
-        # (features are computed from bars; we re-load close from the cache)
-        bars_close = load_bars(symbol, "h1")["close"]
-        entry_price = float(bars_close.asof(dt)) if dt in bars_close.index else 0.0
-        atr_val     = float(row["atr_raw"]) if not np.isnan(row["atr_raw"]) else 0.0
+        entry_price = float(row["close_price"]) if not np.isnan(row["close_price"]) else 0.0
+        atr_val     = float(row["atr_raw"])     if not np.isnan(row["atr_raw"])     else 0.0
 
         return self._run_model(symbol, regime, X, entry_price, atr_val)
 
