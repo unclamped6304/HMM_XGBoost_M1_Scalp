@@ -28,7 +28,7 @@ LIVE_PAIRS = [
 CONFIDENCE_THRESHOLD = 0.70   # minimum XGBoost confidence to take a trade
 
 # ── Risk settings ─────────────────────────────────────────────────────────────
-RISK_PER_TRADE_PCT = 1.0      # % of account balance risked per trade (1R = this)
+RISK_PER_TRADE_PCT = 0.25     # % of account balance risked per trade (1R = this)
 MAX_OPEN_TRADES    = 3        # max simultaneous open positions across all pairs
 MIN_HOLD_BARS      = 1        # minimum H1 bars before closing (prop firm rule)
 MAX_HOLD_BARS      = 16       # maximum H1 bars before force-close (16h)
