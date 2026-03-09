@@ -1,0 +1,10 @@
+hmmlearn
+numpy
+scikit-learn
+scipy
+pandas
+matplotlib
+xgboost
+psycopg2-binary
+sqlalchemy
+python-dotenv
