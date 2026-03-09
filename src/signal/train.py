@@ -122,6 +122,9 @@ def train_pair(symbol: str, regime_lookup: RegimeLookup) -> None:
         X_vl = vl[FEATURE_COLS].values.astype(np.float32)
         y_vl = vl["label"].values.astype(np.int32)
 
+        # XGBoost mlogloss on val requires all classes present in val set
+        use_eval = len(vl) >= MIN_SAMPLES and len(np.unique(y_vl)) == 3
+
         model = XGBClassifier(
             n_estimators=300,
             max_depth=4,
@@ -135,11 +138,10 @@ def train_pair(symbol: str, regime_lookup: RegimeLookup) -> None:
             random_state=42,
             verbosity=0,
         )
-        model.fit(
-            X_tr, y_tr,
-            eval_set=[(X_vl, y_vl)],
-            verbose=False,
-        )
+        if use_eval:
+            model.fit(X_tr, y_tr, eval_set=[(X_vl, y_vl)], verbose=False)
+        else:
+            model.fit(X_tr, y_tr, verbose=False)
 
         val_pred  = model.predict(X_vl)
         val_metrics = _eval_metrics(y_vl, val_pred)
