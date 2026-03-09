@@ -8,10 +8,8 @@ hardcoding lists.
 
 # ── Active trading pairs ───────────────────────────────────────────────────────
 # Selected based on out-of-sample backtest (Sep 2024 – Mar 2026):
-#   - Positive profit factor
+#   - Total R >= 50 on test set
 #   - Smooth, stable equity curves
-#   - Excluded: NZDUSD, NZDCHF, GBPJPY, USDCAD (negative PF)
-#   - Excluded: CADJPY, AUDNZD, GBPNZD, EURCAD, EURNZD, USDJPY, CADCHF (unstable)
 
 LIVE_PAIRS = [
     "USDCHF",   # +139R  WR=46.8%  PF=2.72
@@ -24,12 +22,6 @@ LIVE_PAIRS = [
     "GBPCHF",   #  +56R  WR=35.2%  PF=1.52
     "AUDJPY",   #  +52R  WR=36.4%  PF=1.76
     "GBPAUD",   #  +50R  WR=38.4%  PF=2.09
-    "AUDCAD",   #  +45R  WR=33.3%  PF=1.46
-    "GBPCAD",   #  +45R  WR=38.8%  PF=1.65
-    "AUDCHF",   #  +44R  WR=32.9%  PF=1.31
-    "EURGBP",   #  +44R  WR=37.6%  PF=1.59
-    "EURJPY",   #  +37R  WR=37.6%  PF=1.82
-    "CHFJPY",   #  +35R  WR=35.5%  PF=1.54
 ]
 
 # ── Signal model settings ─────────────────────────────────────────────────────
