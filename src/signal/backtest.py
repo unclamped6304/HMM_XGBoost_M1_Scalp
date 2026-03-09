@@ -19,6 +19,7 @@ Usage:
 """
 
 import argparse
+import json
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -30,18 +31,9 @@ import pandas as pd
 from src.hmm.features import load_bars, TRAIN_RATIO, VAL_RATIO
 from src.signal.predict import SignalEngine
 from src.signal.label import MAX_BARS
+from src.config import LIVE_PAIRS, CONFIDENCE_THRESHOLD
 
-RESULTS_DIR        = Path("models/signal/backtest")
-CONFIDENCE_THRESHOLD = 0.70   # minimum model confidence to take a trade
-
-ALL_PAIRS = [
-    "AUDCAD", "AUDCHF", "AUDJPY", "AUDNZD", "AUDUSD",
-    "CADCHF", "CADJPY", "CHFJPY",
-    "EURAUD", "EURCAD", "EURCHF", "EURGBP", "EURJPY", "EURNZD", "EURUSD",
-    "GBPAUD", "GBPCAD", "GBPCHF", "GBPJPY", "GBPNZD", "GBPUSD",
-    "NZDCAD", "NZDCHF", "NZDJPY", "NZDUSD",
-    "USDCAD", "USDCHF", "USDJPY",
-]
+RESULTS_DIR = Path("models/signal/backtest")
 
 
 # ── Data structures ───────────────────────────────────────────────────────────
@@ -288,64 +280,124 @@ def print_report(results: list[dict]) -> None:
 
 def plot_equity_curves(results: list[dict], save: bool = True) -> None:
     tradeable = [r for r in results if r.get("trades", 0) > 0 and r.get("equity_curve")]
-    tradeable.sort(key=lambda r: r.get("total_R", 0), reverse=True)
+    positive  = sorted([r for r in tradeable if r.get("total_R", 0) >= 0],
+                       key=lambda r: r["total_R"], reverse=True)
+    negative  = sorted([r for r in tradeable if r.get("total_R", 0) <  0],
+                       key=lambda r: r["total_R"], reverse=True)
 
-    n     = len(tradeable)
-    ncols = 4
-    nrows = (n + ncols - 1) // ncols + 1   # +1 for aggregate row
+    ncols  = 5
+    n_pos  = len(positive)
+    n_neg  = len(negative)
+    n_rows = 1 + (n_pos + ncols - 1) // ncols + (1 if n_neg else 0)
 
-    fig = plt.figure(figsize=(20, nrows * 3))
-    fig.suptitle("Backtest Equity Curves — Test Set (Out-of-Sample)", fontsize=13)
-    gs  = gridspec.GridSpec(nrows, ncols, figure=fig)
+    fig = plt.figure(figsize=(24, n_rows * 3.5 + 1))
+    fig.suptitle(
+        "Backtest Equity Curves — Sep 2024 to Mar 2026 (Out-of-Sample, Confidence > 0.70)",
+        fontsize=13, fontweight="bold", y=0.995,
+    )
+    gs = gridspec.GridSpec(n_rows, ncols, figure=fig, hspace=0.55, wspace=0.3)
 
-    # Aggregate equity curve (top row, full width)
-    ax_agg = fig.add_subplot(gs[0, :])
-    combined = np.zeros(max(len(r["equity_curve"]) for r in tradeable))
-    for r in tradeable:
-        eq = np.array(r["equity_curve"])
-        combined[:len(eq)] += eq
-    ax_agg.plot(combined, color="#2c3e50", linewidth=1.2)
-    ax_agg.axhline(0, color="gray", linewidth=0.5, linestyle="--")
-    ax_agg.fill_between(range(len(combined)), combined, 0,
-                         where=combined >= 0, color="#2ecc71", alpha=0.3)
-    ax_agg.fill_between(range(len(combined)), combined, 0,
-                         where=combined < 0,  color="#e74c3c", alpha=0.3)
-    ax_agg.set_title(f"Portfolio ({len(tradeable)} pairs combined)", fontsize=10)
-    ax_agg.set_ylabel("Cumulative R")
+    # ── Portfolio aggregate (full width, top) ─────────────────────────────
+    ax_p = fig.add_subplot(gs[0, :])
+    if tradeable:
+        max_len  = max(len(r["equity_curve"]) for r in tradeable)
+        combined = np.zeros(max_len)
+        for r in tradeable:
+            eq = np.array(r["equity_curve"])
+            combined[:len(eq)] += eq
+        ax_p.plot(combined, color="#2c3e50", linewidth=1.5)
+        ax_p.axhline(0, color="gray", linewidth=0.5, linestyle="--")
+        ax_p.fill_between(range(max_len), combined, 0,
+                          where=combined >= 0, color="#2ecc71", alpha=0.35)
+        ax_p.fill_between(range(max_len), combined, 0,
+                          where=combined <  0, color="#e74c3c", alpha=0.35)
+        total = combined[-1]
+        ax_p.set_title(
+            f"All Pairs Portfolio — Total: {total:+.0f}R | "
+            f"{len(positive)} profitable pairs | {len(negative)} excluded pairs",
+            fontsize=10,
+        )
+    ax_p.set_ylabel("Cumulative R")
+    ax_p.tick_params(labelsize=8)
 
-    # Per-pair charts
-    for idx, r in enumerate(tradeable):
+    # ── Profitable pairs ──────────────────────────────────────────────────
+    for idx, r in enumerate(positive):
         row = (idx // ncols) + 1
         col = idx % ncols
         ax  = fig.add_subplot(gs[row, col])
         eq  = np.array(r["equity_curve"])
-        color = "#2ecc71" if eq[-1] >= 0 else "#e74c3c"
-        ax.plot(eq, color=color, linewidth=0.9)
+        ax.plot(eq, color="#27ae60", linewidth=1.0)
         ax.axhline(0, color="gray", linewidth=0.4, linestyle="--")
+        ax.fill_between(range(len(eq)), eq, 0, color="#27ae60", alpha=0.15)
         ax.set_title(
-            f"{r['symbol']}  {r['total_R']:+.1f}R  WR={r['win_rate']}%",
-            fontsize=7.5
+            f"{r['symbol']}  {r['total_R']:+.0f}R\n"
+            f"WR={r['win_rate']:.0f}%  PF={r['profit_factor']:.2f}  "
+            f"DD={r['max_drawdown_R']:.0f}R",
+            fontsize=7.5, fontweight="bold",
         )
         ax.tick_params(labelsize=6)
 
-    plt.tight_layout()
+    # ── Negative/excluded pairs ───────────────────────────────────────────
+    if negative:
+        neg_row = 1 + (n_pos + ncols - 1) // ncols
+        for idx, r in enumerate(negative):
+            ax = fig.add_subplot(gs[neg_row, idx])
+            eq = np.array(r["equity_curve"])
+            ax.plot(eq, color="#c0392b", linewidth=1.0)
+            ax.axhline(0, color="gray", linewidth=0.4, linestyle="--")
+            ax.fill_between(range(len(eq)), eq, 0, color="#c0392b", alpha=0.15)
+            ax.set_title(
+                f"[EXCL] {r['symbol']}  {r['total_R']:+.0f}R\n"
+                f"WR={r['win_rate']:.0f}%  PF={r['profit_factor']:.2f}",
+                fontsize=7.5, color="#c0392b",
+            )
+            ax.tick_params(labelsize=6)
+
     if save:
         RESULTS_DIR.mkdir(parents=True, exist_ok=True)
         out = RESULTS_DIR / "equity_curves.png"
-        plt.savefig(out, dpi=150)
+        plt.savefig(out, dpi=150, bbox_inches="tight")
         print(f"\nChart saved -> {out}")
     plt.show()
 
 
 # ── CLI ───────────────────────────────────────────────────────────────────────
 
+CACHE_FILE = RESULTS_DIR / "results_cache.json"
+
+
+def save_results(results: list[dict]) -> None:
+    RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+    with open(CACHE_FILE, "w") as f:
+        json.dump(results, f)
+    print(f"Results cached -> {CACHE_FILE}")
+
+
+def load_results() -> list[dict] | None:
+    if CACHE_FILE.exists():
+        with open(CACHE_FILE) as f:
+            return json.load(f)
+    return None
+
+
 def main():
     parser = argparse.ArgumentParser(description="Run out-of-sample backtest")
-    parser.add_argument("--symbol", required=True, help="e.g. EURUSD or ALL")
-    parser.add_argument("--plot",   action="store_true", help="Show equity curve charts")
+    parser.add_argument("--symbol",    required=False,      default="ALL", help="e.g. EURUSD or ALL")
+    parser.add_argument("--plot",      action="store_true", help="Show equity curve charts")
+    parser.add_argument("--replot",    action="store_true", help="Replot from cached results (no rerun)")
     args = parser.parse_args()
 
-    symbols = ALL_PAIRS if args.symbol.upper() == "ALL" else [args.symbol.upper()]
+    # Fast replot from cache
+    if args.replot:
+        results = load_results()
+        if results is None:
+            print("No cached results found. Run without --replot first.")
+            return
+        print_report(results)
+        plot_equity_curves(results)
+        return
+
+    symbols = LIVE_PAIRS if args.symbol.upper() == "ALL" else [args.symbol.upper()]
 
     print("Loading signal engine...")
     engine  = SignalEngine()
@@ -361,6 +413,7 @@ def main():
             results.append({"symbol": symbol, "trades": 0})
 
     print_report(results)
+    save_results(results)
 
     if args.plot:
         plot_equity_curves(results)
