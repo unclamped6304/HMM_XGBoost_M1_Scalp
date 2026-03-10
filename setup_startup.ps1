@@ -5,9 +5,9 @@
 $ErrorActionPreference = "Stop"
 
 $username   = "Administrator"
-$launchScript = "C:\Users\Administrator\IdeaProjects\AIPropFirmScalper\launch.py"
+$launchScript = "C:\Users\Administrator\IdeaProjects\HMM_XGBoost_H1_Swing\launch.py"
 $python     = (Get-Command python.exe).Source
-$taskName   = "AIPropFirmScalper"
+$taskName   = "HMM_XGBoost_H1_Swing"
 
 # ── Prompt for password ────────────────────────────────────────────────────────
 $securePass = Read-Host "Enter password for $username" -AsSecureString
@@ -32,7 +32,7 @@ Unregister-ScheduledTask -TaskName $taskName -Confirm:$false -ErrorAction Silent
 $action = New-ScheduledTaskAction `
     -Execute $python `
     -Argument "`"$launchScript`"" `
-    -WorkingDirectory "C:\Users\Administrator\IdeaProjects\AIPropFirmScalper"
+    -WorkingDirectory "C:\Users\Administrator\IdeaProjects\HMM_XGBoost_H1_Swing"
 
 # Trigger: at logon of this user, with 30s delay to let desktop settle
 $trigger = New-ScheduledTaskTrigger -AtLogOn -User $username
@@ -55,7 +55,7 @@ Register-ScheduledTask `
     -Trigger    $trigger `
     -Settings   $settings `
     -Principal  $principal `
-    -Description "Launch MT5 and AIPropFirmScalper live trader on startup"
+    -Description "Launch MT5 and HMM_XGBoost_H1_Swing live trader on startup"
 
 Write-Host "  Task '$taskName' created."
 Write-Host "`nDone. Reboot to test - MT5 and the live trader will start automatically."

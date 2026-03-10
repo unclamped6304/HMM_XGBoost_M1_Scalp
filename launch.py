@@ -74,7 +74,7 @@ def main():
     log.info("Starting live_trader...")
     result = subprocess.run(
         [sys.executable, "-m", "src.execution.live_trader"],
-        cwd=r"C:\Users\Administrator\IdeaProjects\AIPropFirmScalper",
+        cwd=r"C:\Users\Administrator\IdeaProjects\HMM_XGBoost_H1_Swing",
     )
     sys.exit(result.returncode)
 

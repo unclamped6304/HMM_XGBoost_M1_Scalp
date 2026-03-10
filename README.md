@@ -1,4 +1,4 @@
-# AIPropFirmScalper
+# HMM_XGBoost_H1_Swing
 
 An AI-driven quantitative trading platform targeting Darwinex, running on a single Windows VPS.
 Uses a two-layer HMM regime detector feeding per-regime XGBoost signal classifiers across 10 forex pairs.
@@ -21,8 +21,8 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for full system design.
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/unclamped6304/AIPropFirmScalper.git
-cd AIPropFirmScalper
+git clone https://github.com/unclamped6304/HMM_XGBoost_H1_Swing.git
+cd HMM_XGBoost_H1_Swing
 ```
 
 ### 2. Install Python dependencies

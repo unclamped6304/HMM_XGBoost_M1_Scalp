@@ -1,4 +1,4 @@
-# AIPropFirmScalper — System Architecture
+# HMM_XGBoost_H1_Swing — System Architecture
 
 ## Overview
 

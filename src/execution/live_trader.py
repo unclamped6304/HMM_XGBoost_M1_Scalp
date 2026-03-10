@@ -155,7 +155,7 @@ def _process_signals(
 def run() -> None:
     _setup_logging()
     logging.info("=" * 60)
-    logging.info("AIPropFirmScalper — Live Trader starting")
+    logging.info("HMM_XGBoost_H1_Swing — Live Trader starting")
     logging.info("=" * 60)
 
     if not connect():

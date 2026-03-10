@@ -185,7 +185,7 @@ def place_order(
         "tp":           target,
         "deviation":    20,
         "magic":        MAGIC,
-        "comment":      "AIPropFirmScalper",
+        "comment":      "HMM_XGBoost_H1_Swing",
         "type_time":    mt5.ORDER_TIME_GTC,
         "type_filling": _filling_type(symbol),
     }
@@ -244,7 +244,7 @@ def close_position(ticket: int) -> bool:
         "price":        price,
         "deviation":    20,
         "magic":        MAGIC,
-        "comment":      "AIPropFirmScalper_expire",
+        "comment":      "HMM_XGBoost_H1_Swing_expire",
         "type_time":    mt5.ORDER_TIME_GTC,
         "type_filling": _filling_type(pos.symbol),
     }
