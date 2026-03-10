@@ -2,24 +2,24 @@
 
 ## Overview
 
-A quant trading platform for prop firm trading (FTMO and others), running on a single Windows VPS.
-Designed for simplicity, clean separation of concerns, and easy extension to multiple prop firm accounts.
+An AI-driven quantitative trading platform running on a single Windows VPS.
+Trades 10 selected forex pairs on Darwinex via MetaTrader 5, using a two-layer
+HMM regime detector feeding per-regime XGBoost signal classifiers.
 
 ## Goals
 
-- Generate consistent long-term income across multiple prop firms
-- Single codebase, multiple funded accounts trading identical signals
-- Each prop firm account enforces its own risk rules locally
-- Simple enough to run and maintain solo; structured enough to extend
+- Generate consistent long-term returns on a Darwinex funded account
+- Build a strong DARWIN signal track record to attract investor allocation
+- Single codebase, minimal dependencies, easy to maintain solo
 
 ---
 
 ## Infrastructure
 
 - **Single Windows VPS** — MT5 requires Windows; Python runs on the same machine
-- **Multiple MT5 terminals** — one per prop firm account
-- **PostgreSQL** — historical OHLCV data + trade logging
-- **ZeroMQ** — low-latency socket messaging between MT5 and Python - http://wiki.zeromq.org/docs:windows-installations
+- **MetaTrader 5** — Darwinex-Live account; Python communicates directly via the
+  official `MetaTrader5` Python package (no ZeroMQ, no MQL5 EA required)
+- **PostgreSQL** — historical OHLCV data used for model training only
 
 ---
 
@@ -28,129 +28,130 @@ Designed for simplicity, clean separation of concerns, and easy extension to mul
 ```
 Windows VPS
 │
-│  MT5 Terminal #1 (FTMO)
-│  ├── Data EA        ──[ZMQ PUB]──────────────────────────┐
-│  └── Execution EA   ◄─[ZMQ SUB]──────────────────┐       │
-│                                                   │       │
-│  MT5 Terminal #2 (Funded Next)                    │       ▼
-│  └── Execution EA   ◄─[ZMQ SUB]───────────  Python Signal Engine
-│                                                   │  ├── ZMQ SUB: live bars
-│  MT5 Terminal #3 (Apex / other)                   │  ├── Feature pipeline
-│  └── Execution EA   ◄─[ZMQ SUB]───────────────────┘  ├── ML regime classifier
-│                                                       ├── Signal logic
-│  PostgreSQL                                           └── ZMQ PUB: signals
-│  ├── ohlcv_1m  (historical + live bars)
-│  └── trades    (fills, P&L, performance)
+│  MetaTrader 5 Terminal (Darwinex-Live)
+│  └── MT5 Python package (IPC)
+│         │
+│         ▼
+│  Python Live Trader  (src/execution/live_trader.py)
+│  ├── LiveRegimeDetector  — H4 HMM + D1 currency HMM on live MT5 bars
+│  ├── SignalEngine        — per-regime XGBoost classifiers
+│  ├── MT5 Connector       — lot sizing, order placement, position management
+│  └── RiskGuard           — session drawdown monitor (halt at 8%)
+│
+│  PostgreSQL  (training only — not used at runtime)
+│  └── historicalData schema — OHLCV bars for all symbols/timeframes
 ```
 
 ---
 
 ## Data Flow
 
-### Market Data (MT5 → Python)
-1. Data EA in MT5 Terminal #1 streams live 1M bars via ZMQ PUB socket
-2. Python subscribes to the feed via ZMQ SUB
-3. Python stores bars to PostgreSQL and maintains a rolling in-memory feature window
+### Training (offline, run once or when retraining)
+1. Historical OHLCV bars stored in PostgreSQL (imported via `scripts/import_csv.py`)
+2. H4 per-pair HMM trained to detect 7 market regimes (`src/hmm/train.py`)
+3. D1 per-currency HMM trained on currency strength (`src/hmm/train.py`)
+4. H1 bars forward-labelled with 2:1 R:R outcomes (`src/signal/label.py`)
+5. Per-regime XGBoost classifiers trained for each of 10 live pairs (`src/signal/train.py`)
+6. Out-of-sample backtest validates pair selection (`src/signal/backtest.py`)
 
-### Signal Generation (Python internal)
-1. Feature pipeline computes indicators on incoming bars (ATR, vol, autocorrelation, session flags, etc.)
-2. ML regime classifier determines current market state (trending / mean-reverting / avoid)
-3. Signal logic generates entry/exit signals gated by regime
-4. Position sizing calculated per account risk rules
-
-### Signal Delivery (Python → MT5)
-1. Python publishes signals via ZMQ PUB socket
-2. All Execution EAs across all MT5 terminals subscribe to the same feed
-3. Each EA applies its own firm-specific risk rules before placing orders
-
----
-
-## Component Responsibilities
-
-### Data EA (MQL5)
-- Streams live OHLCV bars to Python via ZMQ PUB
-- No strategy logic — data pipe only
-- Runs in MT5 Terminal #1
-
-### Python Signal Engine
-- Subscribes to live bar feed (ZMQ SUB)
-- Runs feature pipeline and ML model
-- Generates and publishes trading signals (ZMQ PUB)
-- Logs all signals and decisions to PostgreSQL
-- All intelligence lives here
-
-### Execution EA (MQL5)
-- Subscribes to Python signal feed (ZMQ SUB)
-- Places, modifies, and closes orders via MT5
-- Enforces firm-specific hard risk rules:
-  - Daily loss limit
-  - Max drawdown
-  - Max position size
-- Reports fills back to Python (ZMQ PUB) — future
-- One instance per prop firm account
-
-### PostgreSQL
-- `ohlcv_1m` — historical 1M bars (seeded from external data source, appended live)
-- `trades` — trade log: entry, exit, P&L, account, strategy version
+### Live Trading (runtime)
+1. `live_trader.py` fires at each H1 bar close (top of every hour)
+2. `LiveRegimeDetector` fetches recent H4/D1 bars from MT5 and runs the HMM models
+3. `SignalEngine.predict_live()` runs the XGBoost model for the current regime
+4. If signal confidence >= 0.70 and open trades < 3: size and place order
+5. `RiskGuard` monitors session drawdown — halts at 8% from session high
+6. Positions exceeding 16h are force-closed
 
 ---
 
-## ZeroMQ Topology
+## Signal Logic
 
-| Socket | Pattern | Direction | Purpose |
-|--------|---------|-----------|---------|
-| Data feed | PUB/SUB | MT5 → Python | Live bar stream |
-| Signal feed | PUB/SUB | Python → MT5 | Trading signals to all EAs |
+- **Regime detection**: 7-state GaussianHMM on H4 bars per pair + D1 currency strength
+- **Signal model**: XGBoost multi-class (0=No trade, 1=Long, 2=Short), one model per regime per pair
+- **Entry**: market order at current ask/bid
+- **Stop**: ATR(14) × 1.5 from entry
+- **Target**: 2× stop distance (2:1 R:R)
+- **Max hold**: 16 H1 bars (16 hours)
 
-One publisher per feed. Any number of subscribers. Adding a new prop firm account
-requires no changes to Python — just deploy another MT5 terminal + Execution EA.
+---
+
+## Live Pairs (out-of-sample test: Sep 2024 – Mar 2026)
+
+| Pair   | Total R | Win Rate | Profit Factor |
+|--------|---------|----------|---------------|
+| USDCHF | +139R   | 46.8%    | 2.72          |
+| EURUSD | +137R   | 44.6%    | 2.47          |
+| EURAUD | +105R   | 41.3%    | 2.48          |
+| NZDJPY |  +93R   | 43.3%    | 2.24          |
+| AUDUSD |  +65R   | 37.4%    | 1.68          |
+| EURCHF |  +63R   | 36.7%    | 1.54          |
+| GBPUSD |  +60R   | 36.9%    | 1.67          |
+| GBPCHF |  +56R   | 35.2%    | 1.52          |
+| AUDJPY |  +52R   | 36.4%    | 1.76          |
+| GBPAUD |  +50R   | 38.4%    | 2.09          |
+
+---
+
+## Risk Parameters
+
+| Parameter            | Value | Rationale                                        |
+|----------------------|-------|--------------------------------------------------|
+| Risk per trade       | 0.25% | Conservative — Darwinex applies D-Leverage on top |
+| Max open trades      | 3     | Limits correlated exposure                       |
+| Max hold time        | 16h   | Force-close after 16 H1 bars                    |
+| Drawdown halt        | 8%    | 2% buffer before Darwinex 10% limit              |
+| Confidence threshold | 0.70  | Tuned on EURUSD validation set                   |
 
 ---
 
 ## Technology Stack
 
-| Component | Technology |
-|-----------|-----------|
-| Execution & data feed | MQL5 / MetaTrader 5 |
-| Signal engine & ML | Python 3.11+ |
-| Messaging | ZeroMQ (Darwinex connector for MQL5) |
-| Database | PostgreSQL |
-| ML models | scikit-learn / XGBoost |
+| Component        | Technology                        |
+|------------------|-----------------------------------|
+| Execution        | MetaTrader 5 + MT5 Python package |
+| Regime detection | hmmlearn (GaussianHMM, 7 states)  |
+| Signal model     | XGBoost (multi-class classifier)  |
+| Feature pipeline | pandas / numpy                    |
+| Database         | PostgreSQL (training only)        |
+| Language         | Python 3.11+                      |
 
 ---
 
 ## Build Phases
 
-### Phase 1 — Data Foundation
-- Set up PostgreSQL schema
-- Ingest historical 1M data
-- Build feature pipeline
-
-### Phase 2 — Research
-- Label historical regimes
-- Train and walk-forward validate regime classifier
-- Define and backtest entry/exit strategy
-
-### Phase 3 — Execution Bridge
-- Build MQL5 Data EA (ZMQ PUB)
-- Build Python signal engine (ZMQ SUB/PUB)
-- Build MQL5 Execution EA (ZMQ SUB + FTMO risk rules)
-- Paper trade on FTMO demo
-
-### Phase 4 — Production
-- Connect to live FTMO challenge account
-- Monitor P&L, drawdown, signal quality
-- Add additional prop firm terminals as accounts are funded
+| Phase | Status   | Description                                                         |
+|-------|----------|---------------------------------------------------------------------|
+| 1     | Complete | PostgreSQL schema, historical data ingestion (10 years, 32 symbols) |
+| 2     | Complete | HMM regime detection, XGBoost signal models, backtesting, pair selection |
+| 3     | Complete | Live execution bridge via MT5 Python package (Darwinex)             |
+| 4     | Pending  | Live monitoring, performance tracking, scaling                      |
 
 ---
 
-## Prop Firm Scaling Model
+## Project Structure
 
 ```
-Stage 1: Pass FTMO Challenge (demo → funded $10K)
-Stage 2: Stack challenges — FTMO + Funded Next + Apex simultaneously
-Stage 3: Multiple funded accounts, identical signals, firm-specific risk rules
-Stage 4: Scale within firms (FTMO scales profitable accounts up to $2M)
-```
+src/
+├── config.py                  # Central config — pairs, thresholds, risk params
+├── hmm/
+│   ├── features.py            # OHLCV feature engineering + DB loader
+│   ├── train.py               # HMM training (H4 pair + D1 currency)
+│   ├── regime.py              # RegimeLookup — historical regime labelling
+│   └── visualise.py           # Regime chart visualisation
+├── signal/
+│   ├── label.py               # Forward-looking 2:1 R:R trade labeller
+│   ├── train.py               # Per-regime XGBoost training
+│   ├── predict.py             # SignalEngine — backtest + live inference
+│   └── backtest.py            # Out-of-sample backtester
+└── execution/
+    ├── mt5_connector.py       # MT5 connection, bars, orders, lot sizing
+    ├── live_regime.py         # Live HMM regime detection from MT5 bars
+    ├── risk_guard.py          # Session drawdown monitor
+    └── live_trader.py         # Main live trading loop
 
-Risk is isolated per firm — one account blowing up does not affect others.
+scripts/
+└── import_csv.py              # Historical data import (Phase 1 / retraining)
+
+ddl/
+└── historicalData/            # PostgreSQL table definitions per symbol
+```
