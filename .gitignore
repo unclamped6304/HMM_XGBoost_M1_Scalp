@@ -21,3 +21,6 @@ __pycache__/
 
 # Trained models (regenerate from code)
 models/
+
+# Live trader logs
+logs/*.log
