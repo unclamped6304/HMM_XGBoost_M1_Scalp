@@ -6,6 +6,15 @@ and other system-wide settings. Import this everywhere instead of
 hardcoding lists.
 """
 
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+# ── MT5 connection ─────────────────────────────────────────────────────────────
+MT5_PATH     = r"C:\Program Files\Darwinex MetaTrader 5\terminal64.exe"
+MT5_LOGIN = int(os.environ["MT5_LOGIN"])
+
 # ── Active trading pairs ───────────────────────────────────────────────────────
 # Selected based on out-of-sample backtest (Sep 2024 – Mar 2026):
 #   - Total R >= 50 on test set

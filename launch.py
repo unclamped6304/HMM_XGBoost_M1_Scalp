@@ -12,8 +12,9 @@ import logging
 
 import MetaTrader5 as mt5
 
-MT5_EXE = r"C:\Program Files\Darwinex MetaTrader 5\terminal64.exe"
-MT5_SERVER = "Darwinex-Live"
+from src.config import MT5_PATH, MT5_LOGIN
+
+MT5_EXE = MT5_PATH
 RETRY_INTERVAL = 5   # seconds between connection attempts
 MAX_WAIT = 240        # seconds to wait for MT5 to become ready
 
@@ -43,9 +44,9 @@ def wait_for_mt5_ready(max_wait: int = MAX_WAIT) -> bool:
     attempt = 0
     while time.time() < deadline:
         attempt += 1
-        if mt5.initialize(server=MT5_SERVER):
+        if mt5.initialize(path=MT5_EXE):
             info = mt5.account_info()
-            if info is not None:
+            if info is not None and info.login == MT5_LOGIN:
                 log.info(
                     f"MT5 ready — login={info.login} | server={info.server} | "
                     f"balance={info.balance:.2f} {info.currency}"

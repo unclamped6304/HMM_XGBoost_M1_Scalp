@@ -14,7 +14,7 @@ import logging
 import MetaTrader5 as mt5
 import pandas as pd
 
-from src.config import RISK_PER_TRADE_PCT
+from src.config import RISK_PER_TRADE_PCT, MT5_PATH, MT5_LOGIN
 
 log = logging.getLogger(__name__)
 
@@ -32,15 +32,19 @@ _TF_MAP = {
 
 # ── Connection ────────────────────────────────────────────────────────────────
 
-def connect(server: str = "Darwinex-Live") -> bool:
+def connect() -> bool:
     """Initialise MT5 and verify account connection."""
-    if not mt5.initialize(server=server):
+    if not mt5.initialize(path=MT5_PATH):
         log.error(f"MT5 initialize failed: {mt5.last_error()}")
         return False
 
     info = mt5.account_info()
     if info is None:
         log.error(f"Cannot get account info: {mt5.last_error()}")
+        return False
+
+    if info.login != MT5_LOGIN:
+        log.error(f"Wrong account: connected to {info.login}, expected {MT5_LOGIN}")
         return False
 
     log.info(

@@ -158,7 +158,7 @@ def run() -> None:
     logging.info("AIPropFirmScalper — Live Trader starting")
     logging.info("=" * 60)
 
-    if not connect("Darwinex-Live"):
+    if not connect():
         logging.error("Cannot connect to MT5 — aborting")
         return
 
