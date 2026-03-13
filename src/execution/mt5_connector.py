@@ -10,6 +10,7 @@ All monetary values are in the account's deposit currency.
 from __future__ import annotations
 
 import logging
+from datetime import datetime, timezone, timedelta
 
 import MetaTrader5 as mt5
 import pandas as pd
@@ -80,6 +81,26 @@ def get_bars(symbol: str, timeframe: str, n: int) -> pd.DataFrame:
     df["datetime"] = pd.to_datetime(df["time"], unit="s", utc=True).dt.tz_localize(None)
     df = df.set_index("datetime")[["open", "high", "low", "close", "tick_volume"]]
     return df.astype(float)
+
+
+# ── Server time ───────────────────────────────────────────────────────────────
+
+_SERVER_TZ = timezone(timedelta(hours=2))   # Darwinex server: EET (UTC+2)
+                                            # DST shifts to UTC+3 in summer but
+                                            # rollover/cutoff windows have enough
+                                            # buffer to tolerate a 1h DST error.
+
+def get_server_time() -> datetime:
+    """
+    Return the MT5 broker server time as a tz-aware datetime in server timezone.
+    Uses the last tick of EURUSD (always liquid) to read server time.
+    Falls back to system time in EET (UTC+2) when no tick is available
+    (e.g. weekend) — avoids a 2-hour offset error vs raw UTC fallback.
+    """
+    tick = mt5.symbol_info_tick("EURUSD")
+    if tick is not None:
+        return datetime.fromtimestamp(tick.time, tz=_SERVER_TZ)
+    return datetime.now(_SERVER_TZ)
 
 
 # ── Account ───────────────────────────────────────────────────────────────────
@@ -256,4 +277,24 @@ def close_position(ticket: int) -> bool:
         return False
 
     log.info(f"Position closed: ticket={ticket} {pos.symbol}")
+    return True
+
+
+def modify_sltp(ticket: int, sl: float, tp: float) -> bool:
+    """
+    Modify the stop loss and take profit of an open position.
+    Returns True on success.
+    """
+    request = {
+        "action":   mt5.TRADE_ACTION_SLTP,
+        "position": ticket,
+        "sl":       sl,
+        "tp":       tp,
+    }
+    result = mt5.order_send(request)
+    if result is None or result.retcode != mt5.TRADE_RETCODE_DONE:
+        code = result.retcode if result else "None"
+        log.error(f"modify_sltp failed ticket={ticket}: retcode={code} | {mt5.last_error()}")
+        return False
+    log.info(f"SL/TP modified: ticket={ticket} sl={sl} tp={tp}")
     return True

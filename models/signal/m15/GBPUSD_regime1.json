@@ -1,0 +1,43 @@
+{
+  "symbol": "GBPUSD",
+  "regime": 1,
+  "feature_cols": [
+    "log_return",
+    "hl_range",
+    "atr_ratio",
+    "vol_ratio",
+    "body_ratio",
+    "momentum_5",
+    "momentum_20",
+    "momentum_60",
+    "vol_regime",
+    "vol_trend",
+    "price_pos",
+    "base_regime",
+    "quote_regime",
+    "momentum_accel",
+    "atr_squeeze",
+    "swing_break",
+    "chandelier_dist",
+    "adx",
+    "adx_slope"
+  ],
+  "train_samples": 1843,
+  "val_samples": 604,
+  "label_counts": {
+    "no_trade": 454,
+    "long": 635,
+    "short": 754
+  },
+  "val_metrics": {
+    "accuracy": 0.3675,
+    "long_precision": 0.3256,
+    "long_recall": 0.3431,
+    "short_precision": 0.4013,
+    "short_recall": 0.5203
+  },
+  "val_pnl_R": 60.0,
+  "train_start": "2016-05-09 12:00:00",
+  "train_end": "2023-02-02 00:00:00",
+  "trained_at": "2026-03-12T23:14:38.911262+00:00"
+}

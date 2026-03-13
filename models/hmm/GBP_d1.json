@@ -1,0 +1,16 @@
+{
+  "name": "GBP_d1",
+  "n_states": 7,
+  "features": [
+    "log_return",
+    "volatility",
+    "vol_ratio",
+    "momentum_5",
+    "momentum_20"
+  ],
+  "train_score": -7946.1832,
+  "val_score": -1203.9943,
+  "train_start": "2016-04-21 00:00:00",
+  "train_end": "2023-03-17 00:00:00",
+  "trained_at": "2026-03-09T01:13:06.275565+00:00"
+}

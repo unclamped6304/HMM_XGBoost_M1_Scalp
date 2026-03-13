@@ -1,0 +1,16 @@
+{
+  "name": "CAD_d1",
+  "n_states": 7,
+  "features": [
+    "log_return",
+    "volatility",
+    "vol_ratio",
+    "momentum_5",
+    "momentum_20"
+  ],
+  "train_score": -8612.148,
+  "val_score": -2029.3215,
+  "train_start": "2016-04-21 00:00:00",
+  "train_end": "2023-03-17 00:00:00",
+  "trained_at": "2026-03-09T01:13:12.396469+00:00"
+}

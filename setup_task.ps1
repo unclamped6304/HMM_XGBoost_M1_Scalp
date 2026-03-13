@@ -1,13 +1,13 @@
-# setup_task.ps1 — Register the HMM_XGBoost_H1_Swing scheduled task
+# setup_task.ps1 — Register the HMM_XGBoost_M15_TrendFollow scheduled task
 # Run once as Administrator in PowerShell:
 #   powershell -ExecutionPolicy Bypass -File setup_task.ps1
 
 $ErrorActionPreference = "Stop"
 
 $username     = "Administrator"
-$launchScript = "C:\Users\Administrator\IdeaProjects\HMM_XGBoost_H1_Swing\launch.py"
+$launchScript = "C:\Users\Administrator\IdeaProjects\HMM_XGBoost_M1_Scalp\launch.py"
 $python       = (Get-Command python.exe).Source
-$taskName     = "HMM_XGBoost_H1_Swing"
+$taskName     = "HMM_XGBoost_M15_TrendFollow"
 
 # ── Create scheduled task ──────────────────────────────────────────────────────
 Write-Host "Creating scheduled task '$taskName'..."
@@ -18,7 +18,7 @@ Unregister-ScheduledTask -TaskName $taskName -Confirm:$false -ErrorAction Silent
 $action = New-ScheduledTaskAction `
     -Execute $python `
     -Argument "`"$launchScript`"" `
-    -WorkingDirectory "C:\Users\Administrator\IdeaProjects\HMM_XGBoost_H1_Swing"
+    -WorkingDirectory "C:\Users\Administrator\IdeaProjects\HMM_XGBoost_M1_Scalp"
 
 # Trigger: at logon of this user, with 30s delay to let desktop settle
 $trigger = New-ScheduledTaskTrigger -AtLogOn -User $username
@@ -41,7 +41,7 @@ Register-ScheduledTask `
     -Trigger    $trigger `
     -Settings   $settings `
     -Principal  $principal `
-    -Description "Launch MT5 and HMM_XGBoost_H1_Swing live trader on startup"
+    -Description "Launch MT5 and HMM_XGBoost_M15_TrendFollow live trader on startup"
 
 Write-Host "  Task '$taskName' created."
 Write-Host "`nDone. The live trader will launch automatically at next logon."

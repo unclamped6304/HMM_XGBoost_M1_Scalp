@@ -1,0 +1,43 @@
+{
+  "symbol": "USDCHF",
+  "regime": 5,
+  "feature_cols": [
+    "log_return",
+    "hl_range",
+    "atr_ratio",
+    "vol_ratio",
+    "body_ratio",
+    "momentum_5",
+    "momentum_20",
+    "momentum_60",
+    "vol_regime",
+    "vol_trend",
+    "price_pos",
+    "base_regime",
+    "quote_regime",
+    "momentum_accel",
+    "atr_squeeze",
+    "swing_break",
+    "chandelier_dist",
+    "adx",
+    "adx_slope"
+  ],
+  "train_samples": 1565,
+  "val_samples": 218,
+  "label_counts": {
+    "no_trade": 445,
+    "long": 586,
+    "short": 534
+  },
+  "val_metrics": {
+    "accuracy": 0.3853,
+    "long_precision": 0.4286,
+    "long_recall": 0.3553,
+    "short_precision": 0.4107,
+    "short_recall": 0.6301
+  },
+  "val_pnl_R": 44.0,
+  "train_start": "2016-09-27 20:00:00",
+  "train_end": "2022-02-24 04:00:00",
+  "trained_at": "2026-03-12T23:15:51.330823+00:00"
+}

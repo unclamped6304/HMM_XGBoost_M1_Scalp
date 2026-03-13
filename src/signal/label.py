@@ -21,6 +21,16 @@ Constraints:
   - If stop and target hit on same bar → stop wins (conservative)
   - Spread = 1 pip per pair (JPY pairs: 0.01, others: 0.0001)
 
+Trend features (6 additional columns):
+  Early entry signals:
+    momentum_accel  — ROC(5) minus ROC(20): acceleration of momentum
+    atr_squeeze     — ATR(14) / ATR(14).rolling(50).mean(): volatility compression
+    swing_break     — 1 if close > highest high of prior 5 bars
+  Trend exhaustion signals:
+    chandelier_dist — (rolling_20_high - close) / ATR: distance from chandelier stop
+    adx             — ADX(14): trend strength (>25 = strong)
+    adx_slope       — adx.diff(3): positive = strengthening, negative = dying
+
 Usage:
   from src.signal.label import compute_labels
 
@@ -37,8 +47,24 @@ from src.hmm.regime import RegimeLookup
 
 # ── Config ────────────────────────────────────────────────────────────────────
 
-MAX_BARS = 16    # max H1 bars to look forward (16h max hold)
+MAX_BARS = 16    # default (H1): max bars to look forward (16h max hold)
 ATR_PERIOD = 14
+
+# Max hold bars per timeframe — all equivalent to ~16 real hours
+MAX_BARS_MAP: dict[str, int] = {
+    "h1":  16,   # 16 × 1h  = 16h
+    "m15": 64,   # 64 × 15m = 16h
+    "m5":  192,  # 192 × 5m = 16h
+    "m1":  960,  # 960 × 1m = 16h
+}
+
+# Live bar fetch sizes (enough history for all rolling features + warmup)
+N_BARS_LIVE: dict[str, int] = {
+    "h1":  80,
+    "m15": 250,
+    "m5":  600,
+    "m1":  2000,
+}
 
 # ATR multiplier per H4 regime (0-6).
 # We start uniform at 1.5 — tune per-regime after reviewing regime semantics.
@@ -74,18 +100,107 @@ def _atr(bars: pd.DataFrame) -> pd.Series:
     return tr.rolling(ATR_PERIOD).mean()
 
 
+# ── ADX ───────────────────────────────────────────────────────────────────────
+
+def _adx(bars: pd.DataFrame, period: int = 14) -> pd.Series:
+    """Compute ADX(period) using Wilder smoothing (EWM with alpha=1/period)."""
+    high       = bars["high"]
+    low        = bars["low"]
+    prev_high  = high.shift(1)
+    prev_low   = low.shift(1)
+    prev_close = bars["close"].shift(1)
+
+    tr = pd.concat([
+        high - low,
+        (high - prev_close).abs(),
+        (low  - prev_close).abs(),
+    ], axis=1).max(axis=1)
+
+    up_move   = high - prev_high
+    down_move = prev_low - low
+
+    plus_dm  = pd.Series(
+        np.where((up_move > down_move) & (up_move > 0), up_move, 0.0),
+        index=bars.index,
+    )
+    minus_dm = pd.Series(
+        np.where((down_move > up_move) & (down_move > 0), down_move, 0.0),
+        index=bars.index,
+    )
+
+    alpha    = 1.0 / period
+    atr_w    = tr.ewm(alpha=alpha, adjust=False).mean()
+    plus_s   = plus_dm.ewm(alpha=alpha, adjust=False).mean()
+    minus_s  = minus_dm.ewm(alpha=alpha, adjust=False).mean()
+
+    plus_di  = 100.0 * plus_s  / atr_w.replace(0, np.nan)
+    minus_di = 100.0 * minus_s / atr_w.replace(0, np.nan)
+
+    di_sum = (plus_di + minus_di).replace(0, np.nan)
+    dx     = 100.0 * (plus_di - minus_di).abs() / di_sum
+    adx    = dx.ewm(alpha=alpha, adjust=False).mean()
+
+    return adx
+
+
+# ── Trend features ─────────────────────────────────────────────────────────────
+
+def _compute_trend_features(bars: pd.DataFrame) -> pd.DataFrame:
+    """
+    Compute 6 trend quality features from raw H1 OHLCV bars.
+
+    Early entry:
+      momentum_accel  — ROC(5) - ROC(20): positive = momentum accelerating
+      atr_squeeze     — ATR / ATR.rolling(50).mean(): < 1 = compressed volatility
+      swing_break     — 1 if close > highest high of prior 5 bars (breakout signal)
+
+    Trend exhaustion:
+      chandelier_dist — (20-bar highest high - close) / ATR: low = near trailing stop
+      adx             — ADX(14)
+      adx_slope       — adx.diff(3): negative = trend weakening
+    """
+    close = bars["close"]
+    high  = bars["high"]
+    atr   = _atr(bars)
+
+    # ── Early entry ──────────────────────────────────────────────────────────
+    roc5  = np.log(close / close.shift(5))
+    roc20 = np.log(close / close.shift(20))
+    momentum_accel = roc5 - roc20
+
+    atr_squeeze = atr / atr.rolling(50).mean()
+
+    swing_break = (close > high.rolling(5).max().shift(1)).astype(float)
+
+    # ── Trend exhaustion ─────────────────────────────────────────────────────
+    chandelier_dist = (high.rolling(20).max() - close) / atr.replace(0, np.nan)
+
+    adx_series = _adx(bars)
+    adx_slope  = adx_series.diff(3)
+
+    return pd.DataFrame({
+        "momentum_accel":  momentum_accel,
+        "atr_squeeze":     atr_squeeze,
+        "swing_break":     swing_break,
+        "chandelier_dist": chandelier_dist,
+        "adx":             adx_series,
+        "adx_slope":       adx_slope,
+    }, index=bars.index)
+
+
 # ── Forward labeller ──────────────────────────────────────────────────────────
 
 def _label_bar(
     i: int,
-    closes: np.ndarray,
-    highs:  np.ndarray,
-    lows:   np.ndarray,
-    r:      float,
-    spread: float,
+    closes:   np.ndarray,
+    highs:    np.ndarray,
+    lows:     np.ndarray,
+    r:        float,
+    spread:   float,
+    max_bars: int = MAX_BARS,
 ) -> tuple[bool, bool]:
     """
-    For bar i, look forward up to MAX_BARS to determine if a long or
+    For bar i, look forward up to max_bars to determine if a long or
     short entry would achieve 2:1 R:R after accounting for spread.
 
     Returns (long_win, short_win).
@@ -109,7 +224,7 @@ def _label_bar(
     long_dead  = False   # True once long stop has been hit
     short_dead = False   # True once short stop has been hit
 
-    for j in range(i + 1, min(i + 1 + MAX_BARS, n)):
+    for j in range(i + 1, min(i + 1 + max_bars, n)):
         h = highs[j]
         l = lows[j]
 
@@ -136,24 +251,32 @@ def _label_bar(
 
 # ── Main API ──────────────────────────────────────────────────────────────────
 
-def compute_labels(symbol: str, regime_lookup: RegimeLookup = None) -> pd.DataFrame:
+def compute_labels(
+    symbol: str,
+    regime_lookup: RegimeLookup = None,
+    timeframe: str = "h1",
+) -> pd.DataFrame:
     """
-    Compute H1 bar features + regime context + trade labels for a symbol.
+    Compute bar features + regime context + trade labels for a symbol.
 
     Args:
         symbol:         e.g. "EURUSD"
         regime_lookup:  shared RegimeLookup instance (created if not provided)
+        timeframe:      bar timeframe — "h1", "m15", "m5" (default "h1")
 
     Returns:
-        DataFrame indexed by H1 datetime with columns:
-          [H1 features, h4_regime, base_regime, quote_regime, R, label]
+        DataFrame indexed by bar datetime with columns:
+          [bar features, h4_regime, base_regime, quote_regime, R, label]
     """
-    symbol = symbol.upper()
+    symbol    = symbol.upper()
+    timeframe = timeframe.lower()
+    max_bars  = MAX_BARS_MAP.get(timeframe, MAX_BARS)
+
     if regime_lookup is None:
         regime_lookup = RegimeLookup()
 
-    print(f"[label] {symbol}: loading H1 bars...")
-    bars = load_bars(symbol, "h1")
+    print(f"[label] {symbol}: loading {timeframe.upper()} bars...")
+    bars = load_bars(symbol, timeframe)
 
     # H1 features (reuses the same feature set as HMM but on H1)
     features = _compute_ohlcv_features(bars, include_volume=True)
@@ -161,15 +284,24 @@ def compute_labels(symbol: str, regime_lookup: RegimeLookup = None) -> pd.DataFr
     # ATR series aligned to bar index
     atr = _atr(bars).reindex(features.index)
 
+    # Trend quality features (early entry + trend exhaustion)
+    trend_feats = _compute_trend_features(bars)
+
     # Regime labels for every H1 bar
     print(f"[label] {symbol}: loading regime context...")
     regime_hist = regime_lookup.label_history(symbol)
 
-    # Align: keep only bars present in all three
-    idx = features.index.intersection(regime_hist.index).intersection(atr.dropna().index)
+    # Align: keep only bars present in all sources with complete data
+    idx = (
+        features.index
+        .intersection(regime_hist.index)
+        .intersection(atr.dropna().index)
+        .intersection(trend_feats.dropna().index)
+    )
     features    = features.loc[idx]
     regime_hist = regime_hist.loc[idx]
     atr         = atr.loc[idx]
+    trend_feats = trend_feats.loc[idx]
 
     # Build R per bar based on H4 regime
     h4_regimes = regime_hist["pair_regime"].values
@@ -187,19 +319,19 @@ def compute_labels(symbol: str, regime_lookup: RegimeLookup = None) -> pd.DataFr
     lows   = bars["low"].reindex(idx).values
     n      = len(idx)
 
-    print(f"[label] {symbol}: labelling {n} bars (max lookahead={MAX_BARS}h)...")
+    print(f"[label] {symbol}: labelling {n} bars (max lookahead={max_bars} bars)...")
 
     labels     = np.zeros(n, dtype=np.int8)   # 0=No trade
     long_wins  = 0
     short_wins = 0
     ambiguous  = 0
 
-    for i in range(n - MAX_BARS):
+    for i in range(n - max_bars):
         r = r_vals[i]
         if np.isnan(r) or r <= 0:
             continue
 
-        long_win, short_win = _label_bar(i, closes, highs, lows, r, spread)
+        long_win, short_win = _label_bar(i, closes, highs, lows, r, spread, max_bars)
 
         if long_win and not short_win:
             labels[i] = 1
@@ -216,9 +348,14 @@ def compute_labels(symbol: str, regime_lookup: RegimeLookup = None) -> pd.DataFr
     df["base_regime"]  = regime_hist["base_regime"].values
     df["quote_regime"] = regime_hist["quote_regime"].values
     df["R"]            = r_vals
+
+    # Trend quality features
+    for col in trend_feats.columns:
+        df[col] = trend_feats[col].values
+
     df["label"]        = labels
 
-    total    = n - MAX_BARS
+    total    = n - max_bars
     tradeable = long_wins + short_wins
     print(
         f"[label] {symbol}: {total} bars evaluated | "

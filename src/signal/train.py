@@ -29,16 +29,33 @@ from src.hmm.features import TRAIN_RATIO, VAL_RATIO
 from src.hmm.regime import RegimeLookup
 from src.signal.label import compute_labels
 
-MODELS_DIR = Path("models/signal")
-N_REGIMES  = 7
+BASE_MODELS_DIR = Path("models/signal")
+N_REGIMES   = 7
 MIN_SAMPLES = 50   # minimum training samples per regime to bother training
+
+
+def _models_dir(timeframe: str) -> Path:
+    """Models directory: models/signal/ for h1 (backward compat), models/signal/{tf}/ otherwise."""
+    if timeframe.lower() == "h1":
+        return BASE_MODELS_DIR
+    return BASE_MODELS_DIR / timeframe.lower()
+
+
+# Legacy alias used by predict.py
+MODELS_DIR = BASE_MODELS_DIR
 
 # Feature columns used as model input (excludes h4_regime, R, label)
 FEATURE_COLS = [
+    # H1 OHLCV features
     "log_return", "hl_range", "atr_ratio", "vol_ratio", "body_ratio",
     "momentum_5", "momentum_20", "momentum_60",
     "vol_regime", "vol_trend", "price_pos",
+    # Regime context
     "base_regime", "quote_regime",
+    # Trend quality: early entry signals
+    "momentum_accel", "atr_squeeze", "swing_break",
+    # Trend quality: trend exhaustion signals
+    "chandelier_dist", "adx", "adx_slope",
 ]
 
 ALL_PAIRS = [
@@ -92,19 +109,21 @@ def _simulated_pnl(y_true: np.ndarray, y_pred: np.ndarray) -> float:
     return round(pnl, 2)
 
 
-def train_pair(symbol: str, regime_lookup: RegimeLookup) -> None:
-    symbol = symbol.upper()
+def train_pair(symbol: str, regime_lookup: RegimeLookup, timeframe: str = "h1") -> None:
+    symbol    = symbol.upper()
+    timeframe = timeframe.lower()
     print(f"\n{'='*60}")
-    print(f"Training signal models: {symbol}")
+    print(f"Training signal models: {symbol} ({timeframe.upper()})")
     print(f"{'='*60}")
 
     # Compute labels for full history
-    df = compute_labels(symbol, regime_lookup)
+    df = compute_labels(symbol, regime_lookup, timeframe=timeframe)
 
     # Chronological split on the full dataset
     train_df, val_df, test_df = _chronological_split(df)
 
-    MODELS_DIR.mkdir(parents=True, exist_ok=True)
+    mdir = _models_dir(timeframe)
+    mdir.mkdir(parents=True, exist_ok=True)
     summary = []
 
     for regime in range(N_REGIMES):
@@ -149,8 +168,8 @@ def train_pair(symbol: str, regime_lookup: RegimeLookup) -> None:
 
         # Save
         name       = f"{symbol}_regime{regime}"
-        model_path = MODELS_DIR / f"{name}.pkl"
-        meta_path  = MODELS_DIR / f"{name}.json"
+        model_path = mdir / f"{name}.pkl"
+        meta_path  = mdir / f"{name}.json"
 
         joblib.dump(model, model_path)
 
@@ -188,7 +207,7 @@ def train_pair(symbol: str, regime_lookup: RegimeLookup) -> None:
     print(f"\n  Total val P&L across regimes: {total_val_pnl:+.1f}R")
 
 
-def train_all(symbols: list[str] = None) -> None:
+def train_all(symbols: list[str] = None, timeframe: str = "h1") -> None:
     if symbols is None:
         symbols = ALL_PAIRS
 
@@ -197,7 +216,7 @@ def train_all(symbols: list[str] = None) -> None:
 
     for symbol in symbols:
         try:
-            train_pair(symbol, rl)
+            train_pair(symbol, rl, timeframe=timeframe)
         except Exception as e:
             print(f"  ERROR training {symbol}: {e}")
 
@@ -206,14 +225,16 @@ def train_all(symbols: list[str] = None) -> None:
 
 def main():
     parser = argparse.ArgumentParser(description="Train per-regime signal models")
-    parser.add_argument("--symbol", required=True, help="e.g. EURUSD or ALL")
+    parser.add_argument("--symbol",    required=True,  help="e.g. EURUSD or ALL")
+    parser.add_argument("--timeframe", default="h1",   help="Bar timeframe: h1, m15, m5 (default: h1)")
     args = parser.parse_args()
 
+    tf = args.timeframe.lower()
     if args.symbol.upper() == "ALL":
-        train_all()
+        train_all(timeframe=tf)
     else:
         rl = RegimeLookup()
-        train_pair(args.symbol.upper(), rl)
+        train_pair(args.symbol.upper(), rl, timeframe=tf)
 
 
 if __name__ == "__main__":

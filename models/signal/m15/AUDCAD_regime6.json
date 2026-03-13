@@ -1,0 +1,43 @@
+{
+  "symbol": "AUDCAD",
+  "regime": 6,
+  "feature_cols": [
+    "log_return",
+    "hl_range",
+    "atr_ratio",
+    "vol_ratio",
+    "body_ratio",
+    "momentum_5",
+    "momentum_20",
+    "momentum_60",
+    "vol_regime",
+    "vol_trend",
+    "price_pos",
+    "base_regime",
+    "quote_regime",
+    "momentum_accel",
+    "atr_squeeze",
+    "swing_break",
+    "chandelier_dist",
+    "adx",
+    "adx_slope"
+  ],
+  "train_samples": 1656,
+  "val_samples": 368,
+  "label_counts": {
+    "no_trade": 418,
+    "long": 840,
+    "short": 398
+  },
+  "val_metrics": {
+    "accuracy": 0.4674,
+    "long_precision": 0.5189,
+    "long_recall": 0.7697,
+    "short_precision": 0.3108,
+    "short_recall": 0.2674
+  },
+  "val_pnl_R": 142.0,
+  "train_start": "2016-04-21 00:00:00",
+  "train_end": "2023-03-16 16:00:00",
+  "trained_at": "2026-03-12T23:10:53.994510+00:00"
+}

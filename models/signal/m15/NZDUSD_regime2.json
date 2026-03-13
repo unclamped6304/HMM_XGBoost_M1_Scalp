@@ -1,0 +1,43 @@
+{
+  "symbol": "NZDUSD",
+  "regime": 2,
+  "feature_cols": [
+    "log_return",
+    "hl_range",
+    "atr_ratio",
+    "vol_ratio",
+    "body_ratio",
+    "momentum_5",
+    "momentum_20",
+    "momentum_60",
+    "vol_regime",
+    "vol_trend",
+    "price_pos",
+    "base_regime",
+    "quote_regime",
+    "momentum_accel",
+    "atr_squeeze",
+    "swing_break",
+    "chandelier_dist",
+    "adx",
+    "adx_slope"
+  ],
+  "train_samples": 1946,
+  "val_samples": 508,
+  "label_counts": {
+    "no_trade": 521,
+    "long": 850,
+    "short": 575
+  },
+  "val_metrics": {
+    "accuracy": 0.4272,
+    "long_precision": 0.4644,
+    "long_recall": 0.6726,
+    "short_precision": 0.3852,
+    "short_recall": 0.3333
+  },
+  "val_pnl_R": 146.0,
+  "train_start": "2016-04-25 00:00:00",
+  "train_end": "2023-03-17 04:00:00",
+  "trained_at": "2026-03-12T23:15:26.241811+00:00"
+}

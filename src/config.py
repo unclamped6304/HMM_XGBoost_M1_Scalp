@@ -15,32 +15,35 @@ load_dotenv()
 MT5_PATH     = r"C:\Program Files\Darwinex MetaTrader 5\terminal64.exe"
 MT5_LOGIN = int(os.environ["MT5_LOGIN"])
 
+# ── Signal timeframe ──────────────────────────────────────────────────────────
+SIGNAL_TIMEFRAME = "m15"      # bar timeframe for signal models (h1, m15, m5)
+
 # ── Active trading pairs ───────────────────────────────────────────────────────
-# Selected based on out-of-sample backtest (Sep 2024 – Mar 2026):
-#   - Total R >= 50 on test set
-#   - Smooth, stable equity curves
+# Selected based on M15 out-of-sample backtest (Sep 2024 – Mar 2026):
+#   Tier 1 only: PF >= 2.0, stable equity curves
 
 LIVE_PAIRS = [
-    "USDCHF",   # +139R  WR=46.8%  PF=2.72
-    "EURUSD",   # +137R  WR=44.6%  PF=2.47
-    "EURAUD",   # +105R  WR=41.3%  PF=2.48
-    "NZDJPY",   #  +93R  WR=43.3%  PF=2.24
-    "AUDUSD",   #  +65R  WR=37.4%  PF=1.68
-    "EURCHF",   #  +63R  WR=36.7%  PF=1.54
-    "GBPUSD",   #  +60R  WR=36.9%  PF=1.67
-    "GBPCHF",   #  +56R  WR=35.2%  PF=1.52
-    "AUDJPY",   #  +52R  WR=36.4%  PF=1.76
-    "GBPAUD",   #  +50R  WR=38.4%  PF=2.09
+    "AUDNZD",   # +1187R  WR=59.3%  PF=2.99  AvgR=+0.77
+    "CHFJPY",   # +1357R  WR=58.5%  PF=2.86  AvgR=+0.74
+    "GBPCAD",   #  +690R  WR=59.3%  PF=2.92  AvgR=+0.75
+    "GBPNZD",   # +1251R  WR=53.5%  PF=2.35  AvgR=+0.61
+    "GBPCHF",   # +1378R  WR=54.6%  PF=2.39  AvgR=+0.61
+    "EURNZD",   #  +830R  WR=52.2%  PF=2.24  AvgR=+0.57
+    "AUDCAD",   # +1115R  WR=51.7%  PF=2.16  AvgR=+0.53
+    "EURCHF",   # +1048R  WR=51.1%  PF=2.14  AvgR=+0.52
+    "EURAUD",   # +1102R  WR=50.5%  PF=2.10  AvgR=+0.51
+    "AUDCHF",   # +1479R  WR=50.4%  PF=2.07  AvgR=+0.51
+    "EURGBP",   #  +420R  WR=49.8%  PF=2.00  AvgR=+0.48
 ]
 
 # ── Signal model settings ─────────────────────────────────────────────────────
 CONFIDENCE_THRESHOLD = 0.70   # minimum XGBoost confidence to take a trade
 
 # ── Risk settings ─────────────────────────────────────────────────────────────
-RISK_PER_TRADE_PCT = 0.25     # % of account balance risked per trade (1R = this)
-MAX_OPEN_TRADES    = 3        # max simultaneous open positions across all pairs
-MIN_HOLD_BARS      = 1        # minimum H1 bars before closing (prop firm rule)
-MAX_HOLD_BARS      = 16       # maximum H1 bars before force-close (16h)
+RISK_PER_TRADE_PCT = 0.15     # % of account balance risked per trade (1R = this)
+MAX_OPEN_TRADES    = 7        # max simultaneous open positions across all pairs
+MIN_HOLD_BARS      = 4        # minimum M15 bars before closing (prop firm rule, ~1h)
+MAX_HOLD_BARS      = 64       # maximum M15 bars before force-close (16h)
 
 # ── ATR multiplier per H4 regime ─────────────────────────────────────────────
 # Controls stop size: R = ATR(14) × multiplier

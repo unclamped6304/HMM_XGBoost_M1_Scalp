@@ -1,0 +1,22 @@
+{
+  "name": "NZDJPY_h4",
+  "n_states": 7,
+  "features": [
+    "log_return",
+    "hl_range",
+    "atr_ratio",
+    "vol_ratio",
+    "body_ratio",
+    "momentum_5",
+    "momentum_20",
+    "momentum_60",
+    "vol_regime",
+    "vol_trend",
+    "price_pos"
+  ],
+  "train_score": -100886.8294,
+  "val_score": -23445.7474,
+  "train_start": "2016-03-24 04:00:00",
+  "train_end": "2023-03-09 12:00:00",
+  "trained_at": "2026-03-09T01:12:18.752575+00:00"
+}

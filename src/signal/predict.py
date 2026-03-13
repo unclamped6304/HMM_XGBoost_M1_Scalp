@@ -48,8 +48,8 @@ import pandas as pd
 
 from src.hmm.features import load_bars, _compute_ohlcv_features  # load_bars used in predict_live
 from src.hmm.regime import RegimeLookup
-from src.signal.label import ATR_MULT, DEFAULT_MULT, _atr, _spread
-from src.signal.train import FEATURE_COLS, MODELS_DIR
+from src.signal.label import ATR_MULT, DEFAULT_MULT, _atr, _spread, _compute_trend_features, N_BARS_LIVE
+from src.signal.train import FEATURE_COLS, _models_dir
 
 warnings.filterwarnings("ignore")
 
@@ -64,12 +64,16 @@ class SignalEngine:
     """
     Loads all per-regime signal models once and serves predictions.
     Safe to instantiate once and reuse across many bars.
+
+    Args:
+        timeframe: bar timeframe the models were trained on — "h1", "m15", "m5" (default "h1")
     """
 
-    def __init__(self):
+    def __init__(self, timeframe: str = "h1"):
+        self._timeframe      = timeframe.lower()
         self._models:        dict[str, dict[int, object]] = {}  # symbol -> {regime -> model}
         self._feature_cache: dict[str, pd.DataFrame]      = {}  # symbol -> full feature df
-        self._close_cache:   dict[str, pd.Series]         = {}  # symbol -> H1 close series
+        self._close_cache:   dict[str, pd.Series]         = {}  # symbol -> close series
         self._regime_lookup: RegimeLookup | None          = None
 
     # ── Lazy loaders ──────────────────────────────────────────────────────────
@@ -81,39 +85,50 @@ class SignalEngine:
 
     def _load_models(self, symbol: str) -> dict[int, object]:
         if symbol not in self._models:
+            mdir   = _models_dir(self._timeframe)
             models = {}
             for regime in range(7):
-                path = MODELS_DIR / f"{symbol}_regime{regime}.pkl"
+                path = mdir / f"{symbol}_regime{regime}.pkl"
                 if path.exists():
                     models[regime] = joblib.load(path)
             if not models:
                 raise FileNotFoundError(
-                    f"No signal models found for {symbol}. "
-                    f"Run: python -m src.signal.train --symbol {symbol}"
+                    f"No signal models found for {symbol} ({self._timeframe}). "
+                    f"Run: python -m src.signal.train --symbol {symbol} --timeframe {self._timeframe}"
                 )
             self._models[symbol] = models
         return self._models[symbol]
 
     def _load_features(self, symbol: str) -> pd.DataFrame:
-        """Load and cache full H1 feature history for backtest lookups."""
+        """Load and cache full bar feature history for backtest lookups."""
         if symbol not in self._feature_cache:
-            bars     = load_bars(symbol, "h1")
-            features = _compute_ohlcv_features(bars, include_volume=True)
-            atr      = _atr(bars).reindex(features.index)
+            bars        = load_bars(symbol, self._timeframe)
+            features    = _compute_ohlcv_features(bars, include_volume=True)
+            atr         = _atr(bars).reindex(features.index)
+            trend_feats = _compute_trend_features(bars)
 
             rl          = self._get_regime_lookup()
             regime_hist = rl.label_history(symbol)
 
-            idx = features.index.intersection(regime_hist.index).intersection(atr.dropna().index)
+            idx = (
+                features.index
+                .intersection(regime_hist.index)
+                .intersection(atr.dropna().index)
+                .intersection(trend_feats.dropna().index)
+            )
             features    = features.loc[idx].copy()
             regime_hist = regime_hist.loc[idx]
             atr         = atr.loc[idx]
+            trend_feats = trend_feats.loc[idx]
 
             features["h4_regime"]    = regime_hist["pair_regime"].values
             features["base_regime"]  = regime_hist["base_regime"].values
             features["quote_regime"] = regime_hist["quote_regime"].values
             features["atr_raw"]      = atr.values
             features["close_price"]  = bars["close"].reindex(idx).values
+
+            for col in trend_feats.columns:
+                features[col] = trend_feats[col].values
 
             self._feature_cache[symbol] = features
         return self._feature_cache[symbol]
@@ -199,19 +214,17 @@ class SignalEngine:
 
     def predict_live(self, symbol: str, bar: dict | pd.Series, regime_context: dict) -> dict:
         """
-        Live mode: compute features from the just-closed H1 bar and predict.
+        Live mode: compute features from the just-closed bar and predict.
 
         Args:
             symbol:          e.g. "EURUSD"
-            bar:             dict with keys: open, high, low, close, tick_volume
-                             Should be the last ~20 bars as a DataFrame for
-                             rolling features to be meaningful — see note below.
-            regime_context:  output of RegimeLookup.get(symbol, dt)
+            bar:             DataFrame of recent bars (N_BARS_LIVE rows recommended)
+                             or a single-bar dict/Series (rolling features zeroed).
+            regime_context:  output of LiveRegimeDetector.get(symbol)
 
         Note:
-            For reliable rolling features (momentum_60 etc.), pass a DataFrame
-            of the last 80+ H1 bars as `bar`. Single-bar dicts are supported
-            but rolling features will be NaN-filled with 0.
+            Pass N_BARS_LIVE[timeframe] bars for reliable rolling features.
+            Single-bar dicts are supported but rolling features will be zero.
 
         Returns:
             Signal dict or NO_SIGNAL.
@@ -223,11 +236,16 @@ class SignalEngine:
 
         # If a full DataFrame is provided, compute features properly
         if isinstance(bar, pd.DataFrame):
-            features = _compute_ohlcv_features(bar, include_volume=True)
+            features    = _compute_ohlcv_features(bar, include_volume=True)
+            trend_feats = _compute_trend_features(bar)
             if features.empty:
                 return NO_SIGNAL
-            row     = features.iloc[-1]
-            atr_val = float(_atr(bar).iloc[-1])
+            row = features.iloc[-1].copy()
+            # Merge trend features into row
+            if not trend_feats.empty:
+                for col in trend_feats.columns:
+                    row[col] = float(trend_feats[col].iloc[-1])
+            atr_val     = float(_atr(bar).iloc[-1])
             entry_price = float(bar["close"].iloc[-1])
         else:
             # Single bar — rolling features will be missing, fill with 0

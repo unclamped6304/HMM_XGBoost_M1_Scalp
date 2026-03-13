@@ -1,0 +1,43 @@
+{
+  "symbol": "EURJPY",
+  "regime": 3,
+  "feature_cols": [
+    "log_return",
+    "hl_range",
+    "atr_ratio",
+    "vol_ratio",
+    "body_ratio",
+    "momentum_5",
+    "momentum_20",
+    "momentum_60",
+    "vol_regime",
+    "vol_trend",
+    "price_pos",
+    "base_regime",
+    "quote_regime",
+    "momentum_accel",
+    "atr_squeeze",
+    "swing_break",
+    "chandelier_dist",
+    "adx",
+    "adx_slope"
+  ],
+  "train_samples": 2164,
+  "val_samples": 532,
+  "label_counts": {
+    "no_trade": 515,
+    "long": 952,
+    "short": 697
+  },
+  "val_metrics": {
+    "accuracy": 0.3966,
+    "long_precision": 0.4609,
+    "long_recall": 0.642,
+    "short_precision": 0.2587,
+    "short_recall": 0.2256
+  },
+  "val_pnl_R": 105.0,
+  "train_start": "2016-04-21 00:00:00",
+  "train_end": "2023-03-07 12:00:00",
+  "trained_at": "2026-03-12T23:13:08.990136+00:00"
+}

@@ -1,0 +1,43 @@
+{
+  "symbol": "AUDUSD",
+  "regime": 4,
+  "feature_cols": [
+    "log_return",
+    "hl_range",
+    "atr_ratio",
+    "vol_ratio",
+    "body_ratio",
+    "momentum_5",
+    "momentum_20",
+    "momentum_60",
+    "vol_regime",
+    "vol_trend",
+    "price_pos",
+    "base_regime",
+    "quote_regime",
+    "momentum_accel",
+    "atr_squeeze",
+    "swing_break",
+    "chandelier_dist",
+    "adx",
+    "adx_slope"
+  ],
+  "train_samples": 889,
+  "val_samples": 238,
+  "label_counts": {
+    "no_trade": 176,
+    "long": 117,
+    "short": 596
+  },
+  "val_metrics": {
+    "accuracy": 0.5798,
+    "long_precision": 0.3333,
+    "long_recall": 0.0233,
+    "short_precision": 0.6101,
+    "short_recall": 0.9301
+  },
+  "val_pnl_R": 181.0,
+  "train_start": "2016-04-21 20:00:00",
+  "train_end": "2023-03-10 04:00:00",
+  "trained_at": "2026-03-12T23:11:41.081812+00:00"
+}

@@ -1,0 +1,43 @@
+{
+  "symbol": "GBPCAD",
+  "regime": 2,
+  "feature_cols": [
+    "log_return",
+    "hl_range",
+    "atr_ratio",
+    "vol_ratio",
+    "body_ratio",
+    "momentum_5",
+    "momentum_20",
+    "momentum_60",
+    "vol_regime",
+    "vol_trend",
+    "price_pos",
+    "base_regime",
+    "quote_regime",
+    "momentum_accel",
+    "atr_squeeze",
+    "swing_break",
+    "chandelier_dist",
+    "adx",
+    "adx_slope"
+  ],
+  "train_samples": 2147,
+  "val_samples": 273,
+  "label_counts": {
+    "no_trade": 501,
+    "long": 691,
+    "short": 955
+  },
+  "val_metrics": {
+    "accuracy": 0.4505,
+    "long_precision": 0.5,
+    "long_recall": 0.4516,
+    "short_precision": 0.4611,
+    "short_recall": 0.7064
+  },
+  "val_pnl_R": 106.0,
+  "train_start": "2016-04-28 00:00:00",
+  "train_end": "2023-03-08 16:00:00",
+  "trained_at": "2026-03-12T23:13:54.645534+00:00"
+}

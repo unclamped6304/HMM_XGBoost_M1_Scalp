@@ -1,0 +1,43 @@
+{
+  "symbol": "EURCAD",
+  "regime": 2,
+  "feature_cols": [
+    "log_return",
+    "hl_range",
+    "atr_ratio",
+    "vol_ratio",
+    "body_ratio",
+    "momentum_5",
+    "momentum_20",
+    "momentum_60",
+    "vol_regime",
+    "vol_trend",
+    "price_pos",
+    "base_regime",
+    "quote_regime",
+    "momentum_accel",
+    "atr_squeeze",
+    "swing_break",
+    "chandelier_dist",
+    "adx",
+    "adx_slope"
+  ],
+  "train_samples": 1943,
+  "val_samples": 286,
+  "label_counts": {
+    "no_trade": 455,
+    "long": 1075,
+    "short": 413
+  },
+  "val_metrics": {
+    "accuracy": 0.493,
+    "long_precision": 0.5588,
+    "long_recall": 0.8526,
+    "short_precision": 0.1481,
+    "short_recall": 0.0667
+  },
+  "val_pnl_R": 146.0,
+  "train_start": "2016-04-29 12:00:00",
+  "train_end": "2023-03-13 12:00:00",
+  "trained_at": "2026-03-12T23:12:33.700836+00:00"
+}

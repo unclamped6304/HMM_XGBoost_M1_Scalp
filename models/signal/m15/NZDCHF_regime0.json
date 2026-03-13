@@ -1,0 +1,43 @@
+{
+  "symbol": "NZDCHF",
+  "regime": 0,
+  "feature_cols": [
+    "log_return",
+    "hl_range",
+    "atr_ratio",
+    "vol_ratio",
+    "body_ratio",
+    "momentum_5",
+    "momentum_20",
+    "momentum_60",
+    "vol_regime",
+    "vol_trend",
+    "price_pos",
+    "base_regime",
+    "quote_regime",
+    "momentum_accel",
+    "atr_squeeze",
+    "swing_break",
+    "chandelier_dist",
+    "adx",
+    "adx_slope"
+  ],
+  "train_samples": 1537,
+  "val_samples": 239,
+  "label_counts": {
+    "no_trade": 405,
+    "long": 662,
+    "short": 470
+  },
+  "val_metrics": {
+    "accuracy": 0.4644,
+    "long_precision": 0.4641,
+    "long_recall": 0.7717,
+    "short_precision": 0.6327,
+    "short_recall": 0.3196
+  },
+  "val_pnl_R": 104.0,
+  "train_start": "2016-04-28 00:00:00",
+  "train_end": "2023-03-17 20:00:00",
+  "trained_at": "2026-03-12T23:15:02.064520+00:00"
+}

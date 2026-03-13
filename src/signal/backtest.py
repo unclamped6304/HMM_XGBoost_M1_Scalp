@@ -30,8 +30,11 @@ import pandas as pd
 
 from src.hmm.features import load_bars, TRAIN_RATIO, VAL_RATIO
 from src.signal.predict import SignalEngine
-from src.signal.label import MAX_BARS
+from src.signal.label import MAX_BARS, MAX_BARS_MAP, _atr
+from src.signal.train import ALL_PAIRS
 from src.config import LIVE_PAIRS, CONFIDENCE_THRESHOLD
+
+CHANDELIER_MULT = 3.0   # ATR multiplier for chandelier trailing stop
 
 RESULTS_DIR = Path("models/signal/backtest")
 
@@ -59,12 +62,20 @@ class Trade:
 # ── Core simulation ───────────────────────────────────────────────────────────
 
 def _simulate_trade(
-    trade: Trade,
-    bars:  pd.DataFrame,
+    trade:     Trade,
+    bars:      pd.DataFrame,
     entry_idx: int,
+    atr_vals:  np.ndarray,
+    max_bars:  int = MAX_BARS,
 ) -> Trade:
     """
-    Walk forward from entry_idx bar-by-bar until stop, target, or MAX_BARS.
+    Walk forward from entry_idx bar-by-bar until stop, target, or max_bars.
+
+    Uses a chandelier trailing stop (CHANDELIER_MULT × ATR from the highest
+    high / lowest low since entry) alongside the fixed SL.  The effective stop
+    is the tighter of the two, so the chandelier only overrides the fixed SL
+    once the trade is sufficiently in profit.
+
     Mutates and returns the trade.
     """
     highs  = bars["high"].values
@@ -73,72 +84,93 @@ def _simulate_trade(
     times  = bars.index
     n      = len(bars)
 
-    for j in range(entry_idx + 1, min(entry_idx + 1 + MAX_BARS, n)):
+    # Track the running extreme since entry for the chandelier calculation
+    trail_high = highs[entry_idx]
+    trail_low  = lows[entry_idx]
+
+    for j in range(entry_idx + 1, min(entry_idx + 1 + max_bars, n)):
         h = highs[j]
         l = lows[j]
+        atr_j = atr_vals[j] if (j < len(atr_vals) and not np.isnan(atr_vals[j])) else 0.0
 
         if trade.direction == "long":
+            trail_high = max(trail_high, h)
+            chandelier = trail_high - CHANDELIER_MULT * atr_j if atr_j > 0 else trade.stop
+            # Effective stop: chandelier only tightens past the fixed SL
+            eff_stop   = max(trade.stop, chandelier)
             hit_target = h >= trade.target
-            hit_stop   = l <= trade.stop
+            hit_stop   = l <= eff_stop
         else:
+            trail_low  = min(trail_low, l)
+            chandelier = trail_low + CHANDELIER_MULT * atr_j if atr_j > 0 else trade.stop
+            eff_stop   = min(trade.stop, chandelier)
             hit_target = l <= trade.target
-            hit_stop   = h >= trade.stop
+            hit_stop   = h >= eff_stop
 
         if hit_stop and not hit_target:
-            trade.exit_time    = times[j]
-            trade.exit_price   = trade.stop
-            trade.outcome      = "loss"
-            trade.pnl_R        = -1.0
+            trade.exit_time     = times[j]
+            trade.exit_price    = eff_stop
+            trade.outcome       = "loss" if eff_stop == trade.stop else "chandelier"
+            # P&L in units of R (variable when chandelier fires)
+            if trade.direction == "long":
+                trade.pnl_R = (eff_stop - trade.entry_price) / trade.R
+            else:
+                trade.pnl_R = (trade.entry_price - eff_stop) / trade.R
+            trade.pnl_R         = round(trade.pnl_R, 4)
             trade.duration_bars = j - entry_idx
             return trade
 
         if hit_target and not hit_stop:
-            trade.exit_time    = times[j]
-            trade.exit_price   = trade.target
-            trade.outcome      = "win"
-            trade.pnl_R        = 2.0
+            trade.exit_time     = times[j]
+            trade.exit_price    = trade.target
+            trade.outcome       = "win"
+            trade.pnl_R         = 2.0
             trade.duration_bars = j - entry_idx
             return trade
 
         if hit_target and hit_stop:
             # Both hit same bar — conservative: stop wins
-            trade.exit_time    = times[j]
-            trade.exit_price   = trade.stop
-            trade.outcome      = "loss"
-            trade.pnl_R        = -1.0
+            trade.exit_time     = times[j]
+            trade.exit_price    = eff_stop
+            trade.outcome       = "loss"
+            trade.pnl_R         = -1.0
             trade.duration_bars = j - entry_idx
             return trade
 
     # Expired without hitting either level
-    trade.exit_time    = times[min(entry_idx + MAX_BARS, n - 1)]
-    trade.exit_price   = closes[min(entry_idx + MAX_BARS, n - 1)]
-    trade.outcome      = "expired"
-    trade.pnl_R        = 0.0
-    trade.duration_bars = MAX_BARS
+    trade.exit_time     = times[min(entry_idx + max_bars, n - 1)]
+    trade.exit_price    = closes[min(entry_idx + max_bars, n - 1)]
+    trade.outcome       = "expired"
+    trade.pnl_R         = 0.0
+    trade.duration_bars = max_bars
     return trade
 
 
 # ── Backtest runner ───────────────────────────────────────────────────────────
 
-def run_backtest(symbol: str, engine: SignalEngine) -> list[Trade]:
-    symbol = symbol.upper()
-    bars   = load_bars(symbol, "h1")
+def run_backtest(symbol: str, engine: SignalEngine, timeframe: str = "h1") -> list[Trade]:
+    symbol    = symbol.upper()
+    timeframe = timeframe.lower()
+    max_bars  = MAX_BARS_MAP.get(timeframe, MAX_BARS)
+
+    bars = load_bars(symbol, timeframe)
+
+    # Pre-compute ATR for the full bar series (needed for chandelier stop)
+    atr_vals = _atr(bars).values
 
     # Test set: last 15% of bars
     n      = len(bars)
     i_test = int(n * (TRAIN_RATIO + VAL_RATIO))
     test_bars = bars.iloc[i_test:]
 
-    highs  = test_bars["high"].values
-    lows   = test_bars["low"].values
-    times  = test_bars.index
+    times = test_bars.index
 
     trades: list[Trade] = []
     in_trade = False
     current_trade: Trade | None = None
     current_exit_idx = -1
 
-    print(f"[backtest] {symbol}: {len(test_bars)} test bars "
+    print(f"[backtest] {symbol} ({timeframe.upper()}): {len(test_bars)} test bars "
           f"({times[0].date()} to {times[-1].date()})")
 
     for i, dt in enumerate(times):
@@ -176,10 +208,9 @@ def run_backtest(symbol: str, engine: SignalEngine) -> list[Trade]:
             confidence  = sig["confidence"],
         )
 
-        # Simulate forward from this bar
-        # We need the absolute index in the full bars array
+        # Simulate forward (absolute index in full bars array)
         abs_idx = bars.index.get_loc(dt)
-        _simulate_trade(trade, bars, abs_idx)
+        _simulate_trade(trade, bars, abs_idx, atr_vals, max_bars)
 
         in_trade       = True
         current_trade  = trade
@@ -229,6 +260,7 @@ def summarise(trades: list[Trade], symbol: str) -> dict:
         "trades":            len(trades),
         "wins":              int((pnls == 2.0).sum()),
         "losses":            int((pnls == -1.0).sum()),
+        "chandelier":        outcomes.count("chandelier"),
         "expired":           outcomes.count("expired"),
         "win_rate":          round(float((pnls > 0).mean() * 100), 1),
         "total_R":           round(float(pnls.sum()), 2),
@@ -251,15 +283,16 @@ def print_report(results: list[dict]) -> None:
     print(f"{'='*95}")
     print(
         f"{'Symbol':<10} {'Trades':>7} {'WinRate':>8} {'Total R':>9} "
-        f"{'Avg R':>7} {'MaxDD R':>9} {'PF':>7} {'AvgDur':>8}"
+        f"{'Avg R':>7} {'MaxDD R':>9} {'PF':>7} {'AvgDur':>8} {'Chandelier':>11}"
     )
-    print("-" * 95)
+    print("-" * 107)
     for r in tradeable:
         print(
             f"{r['symbol']:<10} {r['trades']:>7} {r['win_rate']:>7.1f}% "
             f"{r['total_R']:>+9.1f} {r['avg_R']:>+7.3f} "
             f"{r['max_drawdown_R']:>+9.1f} {r['profit_factor']:>7.2f} "
-            f"{r['avg_duration_bars']:>7.1f}h"
+            f"{r['avg_duration_bars']:>7.1f}h "
+            f"{r.get('chandelier', 0):>11}"
         )
 
     # Portfolio aggregate
@@ -383,29 +416,36 @@ def load_results() -> list[dict] | None:
 def main():
     parser = argparse.ArgumentParser(description="Run out-of-sample backtest")
     parser.add_argument("--symbol",    required=False,      default="ALL", help="e.g. EURUSD or ALL")
+    parser.add_argument("--timeframe", default="h1",                       help="Bar timeframe: h1, m15, m5 (default: h1)")
     parser.add_argument("--plot",      action="store_true", help="Show equity curve charts")
     parser.add_argument("--replot",    action="store_true", help="Replot from cached results (no rerun)")
     args = parser.parse_args()
+
+    tf = args.timeframe.lower()
+
+    # Cache file is per-timeframe
+    global CACHE_FILE
+    CACHE_FILE = RESULTS_DIR / f"results_cache_{tf}.json"
 
     # Fast replot from cache
     if args.replot:
         results = load_results()
         if results is None:
-            print("No cached results found. Run without --replot first.")
+            print(f"No cached results found for {tf}. Run without --replot first.")
             return
         print_report(results)
         plot_equity_curves(results)
         return
 
-    symbols = LIVE_PAIRS if args.symbol.upper() == "ALL" else [args.symbol.upper()]
+    symbols = ALL_PAIRS if args.symbol.upper() == "ALL" else [args.symbol.upper()]
 
-    print("Loading signal engine...")
-    engine  = SignalEngine()
+    print(f"Loading signal engine ({tf.upper()})...")
+    engine  = SignalEngine(timeframe=tf)
     results = []
 
     for symbol in symbols:
         try:
-            trades = run_backtest(symbol, engine)
+            trades  = run_backtest(symbol, engine, timeframe=tf)
             summary = summarise(trades, symbol)
             results.append(summary)
         except Exception as e:
