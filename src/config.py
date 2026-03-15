@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # ── MT5 connection ─────────────────────────────────────────────────────────────
-MT5_PATH     = r"C:\Program Files\Darwinex MetaTrader 5\terminal64.exe"
+MT5_PATH  = os.environ["MT5_PATH"]
 MT5_LOGIN = int(os.environ["MT5_LOGIN"])
 
 # ── Signal timeframe ──────────────────────────────────────────────────────────

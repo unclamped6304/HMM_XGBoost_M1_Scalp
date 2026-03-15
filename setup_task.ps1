@@ -5,7 +5,7 @@
 $ErrorActionPreference = "Stop"
 
 $username     = "Administrator"
-$launchScript = "C:\Users\Administrator\IdeaProjects\HMM_XGBoost_M1_Scalp\launch.py"
+$launchScript = "C:\Users\Administrator\IdeaProjects\HMM_XGBoost_M15_Scalp\launch.py"
 $python       = (Get-Command python.exe).Source
 $taskName     = "HMM_XGBoost_M15_TrendFollow"
 
@@ -18,7 +18,7 @@ Unregister-ScheduledTask -TaskName $taskName -Confirm:$false -ErrorAction Silent
 $action = New-ScheduledTaskAction `
     -Execute $python `
     -Argument "`"$launchScript`"" `
-    -WorkingDirectory "C:\Users\Administrator\IdeaProjects\HMM_XGBoost_M1_Scalp"
+    -WorkingDirectory "C:\Users\Administrator\IdeaProjects\HMM_XGBoost_M15_Scalp"
 
 # Trigger: at logon of this user, with 30s delay to let desktop settle
 $trigger = New-ScheduledTaskTrigger -AtLogOn -User $username

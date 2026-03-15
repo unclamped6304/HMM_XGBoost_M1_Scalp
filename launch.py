@@ -74,7 +74,7 @@ def main():
     log.info("Starting live_trader...")
     result = subprocess.run(
         [sys.executable, "-m", "src.execution.live_trader"],
-        cwd=r"C:\Users\Administrator\IdeaProjects\HMM_XGBoost_M1_Scalp",
+        cwd=r"C:\Users\Administrator\IdeaProjects\HMM_XGBoost_M15_Scalp",
     )
     sys.exit(result.returncode)
 
