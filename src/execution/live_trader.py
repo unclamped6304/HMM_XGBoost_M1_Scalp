@@ -32,6 +32,7 @@ from src.config import (
     MAX_OPEN_TRADES,
     MAX_HOLD_BARS,
     SIGNAL_TIMEFRAME,
+    MT5_LOGIN,
 )
 from src.execution.mt5_connector import (
     MAGIC,
@@ -210,7 +211,7 @@ def _widen_stops(
 
         if modify_sltp(ticket, round(new_sl, 6), round(new_tp, 6)):
             originals[ticket] = (orig_sl, orig_tp)
-            rollover_store.save(ticket, orig_sl, orig_tp)
+            rollover_store.save(MT5_LOGIN, ticket, orig_sl, orig_tp)
             logging.info(
                 f"[rollover] {pos['symbol']} ticket={ticket} — "
                 f"SL {orig_sl:.5f}→{new_sl:.5f}  TP {orig_tp:.5f}→{new_tp:.5f}"
@@ -232,7 +233,7 @@ def _restore_stops(
             # Trade closed during rollover (spread spike etc.) — nothing to restore
             logging.info(f"[rollover] ticket={ticket} closed during rollover — skipping restore")
             del originals[ticket]
-            rollover_store.delete(ticket)
+            rollover_store.delete(MT5_LOGIN, ticket)
             continue
 
         if modify_sltp(ticket, orig_sl, orig_tp):
@@ -241,7 +242,7 @@ def _restore_stops(
                 f"[rollover] {symbol} ticket={ticket} — SL/TP restored to {orig_sl:.5f} / {orig_tp:.5f}"
             )
             del originals[ticket]
-            rollover_store.delete(ticket)
+            rollover_store.delete(MT5_LOGIN, ticket)
 
 
 # ── Signal processing ─────────────────────────────────────────────────────────
@@ -346,7 +347,7 @@ def run() -> None:
 
     last_processed_hour  = -1
     rollover_active      = False
-    rollover_originals: dict[int, tuple[float, float]] = rollover_store.load_all()
+    rollover_originals: dict[int, tuple[float, float]] = rollover_store.load_all(MT5_LOGIN)
     if rollover_originals:
         logging.info(f"[rollover] Loaded {len(rollover_originals)} persisted originals from DB (restart recovery)")
 
