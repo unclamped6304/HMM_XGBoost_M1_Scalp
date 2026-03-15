@@ -11,6 +11,12 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# ── Database ───────────────────────────────────────────────────────────────────
+DB_HOST     = os.environ["DB_HOST"]
+DB_NAME     = os.environ["DB_NAME"]
+DB_USER     = os.environ["DB_USER"]
+DB_PASSWORD = os.environ["DB_PASSWORD"]
+
 # ── MT5 connection ─────────────────────────────────────────────────────────────
 MT5_PATH  = os.environ["MT5_PATH"]
 MT5_LOGIN = int(os.environ["MT5_LOGIN"])

@@ -47,6 +47,7 @@ from src.execution.mt5_connector import (
 )
 from src.execution.live_regime import LiveRegimeDetector
 from src.execution.risk_guard import RiskGuard
+from src.execution import rollover_store
 from src.signal.predict import SignalEngine
 from src.signal.label import _atr, _adx, N_BARS_LIVE
 
@@ -209,6 +210,7 @@ def _widen_stops(
 
         if modify_sltp(ticket, round(new_sl, 6), round(new_tp, 6)):
             originals[ticket] = (orig_sl, orig_tp)
+            rollover_store.save(ticket, orig_sl, orig_tp)
             logging.info(
                 f"[rollover] {pos['symbol']} ticket={ticket} — "
                 f"SL {orig_sl:.5f}→{new_sl:.5f}  TP {orig_tp:.5f}→{new_tp:.5f}"
@@ -230,6 +232,7 @@ def _restore_stops(
             # Trade closed during rollover (spread spike etc.) — nothing to restore
             logging.info(f"[rollover] ticket={ticket} closed during rollover — skipping restore")
             del originals[ticket]
+            rollover_store.delete(ticket)
             continue
 
         if modify_sltp(ticket, orig_sl, orig_tp):
@@ -238,6 +241,7 @@ def _restore_stops(
                 f"[rollover] {symbol} ticket={ticket} — SL/TP restored to {orig_sl:.5f} / {orig_tp:.5f}"
             )
             del originals[ticket]
+            rollover_store.delete(ticket)
 
 
 # ── Signal processing ─────────────────────────────────────────────────────────
@@ -321,6 +325,8 @@ def run() -> None:
     logging.info(f"HMM_XGBoost_{SIGNAL_TIMEFRAME.upper()}_TrendFollow — Live Trader starting")
     logging.info("=" * 60)
 
+    rollover_store.ensure_table()
+
     if not connect():
         logging.error("Cannot connect to MT5 — aborting")
         return
@@ -340,7 +346,9 @@ def run() -> None:
 
     last_processed_hour  = -1
     rollover_active      = False
-    rollover_originals: dict[int, tuple[float, float]] = {}  # ticket -> (sl, tp)
+    rollover_originals: dict[int, tuple[float, float]] = rollover_store.load_all()
+    if rollover_originals:
+        logging.info(f"[rollover] Loaded {len(rollover_originals)} persisted originals from DB (restart recovery)")
 
     try:
         while True:
