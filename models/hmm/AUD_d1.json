@@ -1,6 +1,6 @@
 {
   "name": "AUD_d1",
-  "n_states": 7,
+  "n_states": 3,
   "features": [
     "log_return",
     "volatility",
@@ -8,9 +8,9 @@
     "momentum_5",
     "momentum_20"
   ],
-  "train_score": -8947.695,
-  "val_score": -1962.2374,
+  "train_score": -10174.457,
+  "val_score": -2211.232,
   "train_start": "2016-04-21 00:00:00",
   "train_end": "2023-03-17 00:00:00",
-  "trained_at": "2026-03-09T01:13:10.023035+00:00"
+  "trained_at": "2026-03-18T00:38:12.472504+00:00"
 }

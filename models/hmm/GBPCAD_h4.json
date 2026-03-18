@@ -1,6 +1,6 @@
 {
   "name": "GBPCAD_h4",
-  "n_states": 7,
+  "n_states": 3,
   "features": [
     "log_return",
     "hl_range",
@@ -14,9 +14,9 @@
     "vol_trend",
     "price_pos"
   ],
-  "train_score": -98422.2718,
-  "val_score": -20695.7844,
+  "train_score": -112812.2061,
+  "val_score": -22789.3477,
   "train_start": "2016-03-24 04:00:00",
   "train_end": "2023-03-09 20:00:00",
-  "trained_at": "2026-03-09T01:10:59.042079+00:00"
+  "trained_at": "2026-03-18T00:37:39.645094+00:00"
 }

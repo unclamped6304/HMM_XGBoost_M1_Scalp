@@ -33,6 +33,8 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+from scipy.special import logsumexp
+from hmmlearn import _hmmc
 
 from src.hmm.features import (
     load_features,
@@ -59,11 +61,37 @@ _PAIR_CURRENCIES: dict[str, tuple[str, str]] = {
 }
 
 
+def _forward_decode(model, scaled: np.ndarray) -> np.ndarray:
+    """
+    Causal (forward-only) HMM state decoding.
+
+    Uses the forward algorithm (filtering) so the regime at time t is
+    determined solely by observations up to and including t — no future
+    data leaks in.  This matches what is achievable in live trading.
+
+    Contrast with model.predict() which runs Viterbi on the full sequence
+    and therefore uses all future observations when labelling each bar.
+    """
+    log_frameprob = model._compute_log_likelihood(scaled)
+    _, fwdlattice  = _hmmc.forward_log(
+        model.startprob_, model.transmat_, log_frameprob
+    )
+    # Normalise each row: log P(state | obs_1..t)  →  probabilities
+    log_norm   = logsumexp(fwdlattice, axis=1, keepdims=True)
+    posteriors = np.exp(fwdlattice - log_norm)
+    return posteriors.argmax(axis=1)
+
+
 def _smooth_labels(labels: np.ndarray) -> np.ndarray:
-    """Apply rolling mode smoothing — same logic as visualise.py."""
+    """
+    Apply causal rolling mode smoothing (center=False).
+
+    Uses only the current bar and the preceding SMOOTH_WINDOW-1 bars,
+    so no future data is consumed.  center=True would leak future bars.
+    """
     s = pd.Series(labels)
     return (
-        s.rolling(SMOOTH_WINDOW, center=True, min_periods=1)
+        s.rolling(SMOOTH_WINDOW, center=False, min_periods=1)
          .apply(lambda x: pd.Series(x).mode()[0], raw=True)
          .astype(int)
          .values
@@ -94,7 +122,7 @@ class RegimeLookup:
         model, scaler, _ = load_model(model_name)
         features = load_features(symbol, "h4", split=False)
         scaled   = scaler.transform(features.values)
-        raw      = model.predict(scaled)
+        raw      = _forward_decode(model, scaled)
         smoothed = _smooth_labels(raw)
         self._pair_labels[symbol] = pd.Series(smoothed, index=features.index, name="pair_regime")
         self._loaded_pairs.add(symbol)
@@ -111,7 +139,7 @@ class RegimeLookup:
         model, scaler, _ = load_model(model_name)
         features = load_currency_features(currency, split=False)
         scaled   = scaler.transform(features.values)
-        raw      = model.predict(scaled)
+        raw      = _forward_decode(model, scaled)
         smoothed = _smooth_labels(raw)
         self._currency_labels[currency] = pd.Series(smoothed, index=features.index, name="regime")
         self._loaded_currencies.add(currency)

@@ -1,6 +1,6 @@
 {
   "name": "AUDCHF_h4",
-  "n_states": 7,
+  "n_states": 3,
   "features": [
     "log_return",
     "hl_range",
@@ -14,9 +14,9 @@
     "vol_trend",
     "price_pos"
   ],
-  "train_score": -101953.7696,
-  "val_score": -25772.6674,
+  "train_score": -117706.308,
+  "val_score": -28458.9522,
   "train_start": "2016-03-24 04:00:00",
   "train_end": "2023-03-09 20:00:00",
-  "trained_at": "2026-03-09T01:09:01.275515+00:00"
+  "trained_at": "2026-03-18T00:37:10.708417+00:00"
 }

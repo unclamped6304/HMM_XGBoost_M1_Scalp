@@ -25,15 +25,11 @@ import pandas as pd
 from src.hmm.features import load_bars, load_features, load_currency_features, CURRENCY_PAIRS
 from src.hmm.train import load_model, MODELS_DIR
 
-# 7 visually distinct colours for the regimes
+# 3 visually distinct colours for the regimes
 REGIME_COLOURS = [
     "#2ecc71",  # 0 — green
-    "#27ae60",  # 1 — dark green
-    "#f39c12",  # 2 — orange
-    "#e74c3c",  # 3 — red
-    "#c0392b",  # 4 — dark red
-    "#3498db",  # 5 — blue
-    "#9b59b6",  # 6 — purple
+    "#f39c12",  # 1 — orange
+    "#e74c3c",  # 2 — red
 ]
 REGIME_ALPHA = 0.25
 

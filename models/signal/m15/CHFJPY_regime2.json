@@ -22,22 +22,22 @@
     "adx",
     "adx_slope"
   ],
-  "train_samples": 260,
-  "val_samples": 116,
+  "train_samples": 3609,
+  "val_samples": 901,
   "label_counts": {
-    "no_trade": 61,
-    "long": 103,
-    "short": 96
+    "no_trade": 893,
+    "long": 1410,
+    "short": 1306
   },
   "val_metrics": {
-    "accuracy": 0.4224,
-    "long_precision": 0.4043,
-    "long_recall": 0.475,
-    "short_precision": 0.4722,
-    "short_recall": 0.3696
+    "accuracy": 0.3807,
+    "long_precision": 0.4187,
+    "long_recall": 0.5251,
+    "short_precision": 0.368,
+    "short_recall": 0.4081
   },
-  "val_pnl_R": 25.0,
-  "train_start": "2016-04-28 08:00:00",
-  "train_end": "2023-01-18 20:00:00",
-  "trained_at": "2026-03-12T23:12:11.452692+00:00"
+  "val_pnl_R": 152.0,
+  "train_start": "2016-05-30 12:00:00",
+  "train_end": "2023-03-07 20:00:00",
+  "trained_at": "2026-03-18T10:43:15.833998+00:00"
 }

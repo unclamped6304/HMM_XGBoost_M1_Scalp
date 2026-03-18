@@ -1,7 +1,7 @@
 """
 train.py — Train per-regime XGBoost signal classifiers.
 
-For each pair, trains 7 XGBoost models — one per H4 regime.
+For each pair, trains 3 XGBoost models — one per H4 regime.
 Each model learns: given current H1 market features, is this bar a
 good Long entry, Short entry, or No trade within this specific regime?
 
@@ -30,7 +30,7 @@ from src.hmm.regime import RegimeLookup
 from src.signal.label import compute_labels
 
 BASE_MODELS_DIR = Path("models/signal")
-N_REGIMES   = 7
+N_REGIMES   = 3
 MIN_SAMPLES = 50   # minimum training samples per regime to bother training
 
 

@@ -14,7 +14,7 @@ Loads all trained per-regime XGBoost models and provides two interfaces:
 Signal output dict:
   {
     "signal":      "long" | "short" | "none",
-    "regime":      int (0-6, the H4 regime that fired),
+    "regime":      int (0-2, the H4 regime that fired),
     "confidence":  float (model probability for predicted class),
     "R":           float (stop size in price units),
     "entry":       float (suggested entry price),
@@ -49,7 +49,7 @@ import pandas as pd
 from src.hmm.features import load_bars, _compute_ohlcv_features  # load_bars used in predict_live
 from src.hmm.regime import RegimeLookup
 from src.signal.label import ATR_MULT, DEFAULT_MULT, _atr, _spread, _compute_trend_features, N_BARS_LIVE
-from src.signal.train import FEATURE_COLS, _models_dir
+from src.signal.train import FEATURE_COLS, N_REGIMES, _models_dir
 
 warnings.filterwarnings("ignore")
 
@@ -87,7 +87,7 @@ class SignalEngine:
         if symbol not in self._models:
             mdir   = _models_dir(self._timeframe)
             models = {}
-            for regime in range(7):
+            for regime in range(N_REGIMES):
                 path = mdir / f"{symbol}_regime{regime}.pkl"
                 if path.exists():
                     models[regime] = joblib.load(path)

@@ -1,5 +1,5 @@
 """
-train.py — Train 7-state HMM regime models and save to disk.
+train.py — Train 3-state HMM regime models and save to disk.
 
 Two modes:
   1. Per-pair H4 model  (Layer 1) — one model per trading pair
@@ -43,7 +43,7 @@ from src.hmm.features import (
     load_features,
 )
 
-N_STATES        = 7
+N_STATES        = 3
 N_ITER          = 200
 RANDOM_STATE    = 42
 # Probability of staying in the current state — biases the HMM toward

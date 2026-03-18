@@ -1,6 +1,6 @@
 {
   "name": "NZDUSD_h4",
-  "n_states": 7,
+  "n_states": 3,
   "features": [
     "log_return",
     "hl_range",
@@ -14,9 +14,9 @@
     "vol_trend",
     "price_pos"
   ],
-  "train_score": -104535.4406,
-  "val_score": -23296.996,
+  "train_score": -119324.0022,
+  "val_score": -26183.9303,
   "train_start": "2016-03-24 04:00:00",
   "train_end": "2023-03-09 16:00:00",
-  "trained_at": "2026-03-09T01:12:28.644945+00:00"
+  "trained_at": "2026-03-18T00:37:53.307815+00:00"
 }

@@ -1,6 +1,6 @@
 {
   "name": "EURCHF_h4",
-  "n_states": 7,
+  "n_states": 3,
   "features": [
     "log_return",
     "hl_range",
@@ -14,9 +14,9 @@
     "vol_trend",
     "price_pos"
   ],
-  "train_score": -102879.3555,
-  "val_score": -25315.322,
+  "train_score": -117895.2279,
+  "val_score": -27775.6554,
   "train_start": "2016-03-24 04:00:00",
   "train_end": "2023-03-09 12:00:00",
-  "trained_at": "2026-03-09T01:10:05.897255+00:00"
+  "trained_at": "2026-03-18T00:37:29.373928+00:00"
 }

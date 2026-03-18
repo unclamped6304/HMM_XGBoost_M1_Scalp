@@ -1,6 +1,6 @@
 {
   "name": "JPY_d1",
-  "n_states": 7,
+  "n_states": 3,
   "features": [
     "log_return",
     "volatility",
@@ -8,9 +8,9 @@
     "momentum_5",
     "momentum_20"
   ],
-  "train_score": -7874.5031,
-  "val_score": -2008.1007,
+  "train_score": -9249.9957,
+  "val_score": -2151.4988,
   "train_start": "2016-04-21 00:00:00",
   "train_end": "2023-03-17 00:00:00",
-  "trained_at": "2026-03-09T01:13:08.831681+00:00"
+  "trained_at": "2026-03-18T00:38:11.669756+00:00"
 }

@@ -1,6 +1,6 @@
 {
   "name": "NZD_d1",
-  "n_states": 7,
+  "n_states": 3,
   "features": [
     "log_return",
     "volatility",
@@ -8,9 +8,9 @@
     "momentum_5",
     "momentum_20"
   ],
-  "train_score": -8998.4072,
-  "val_score": -2187.6834,
+  "train_score": -10242.2161,
+  "val_score": -2303.1309,
   "train_start": "2016-04-21 00:00:00",
   "train_end": "2023-03-17 00:00:00",
-  "trained_at": "2026-03-09T01:13:11.117065+00:00"
+  "trained_at": "2026-03-18T00:38:13.295221+00:00"
 }

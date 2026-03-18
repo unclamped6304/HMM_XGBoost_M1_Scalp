@@ -1,6 +1,6 @@
 {
   "name": "EUR_d1",
-  "n_states": 7,
+  "n_states": 3,
   "features": [
     "log_return",
     "volatility",
@@ -8,9 +8,9 @@
     "momentum_5",
     "momentum_20"
   ],
-  "train_score": -8557.8553,
-  "val_score": -1775.5092,
+  "train_score": -10211.978,
+  "val_score": -2064.0642,
   "train_start": "2016-04-21 00:00:00",
   "train_end": "2023-03-17 00:00:00",
-  "trained_at": "2026-03-09T01:13:05.299572+00:00"
+  "trained_at": "2026-03-18T00:38:09.268984+00:00"
 }

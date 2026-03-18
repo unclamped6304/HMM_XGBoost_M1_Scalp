@@ -1,6 +1,6 @@
 {
   "name": "CHF_d1",
-  "n_states": 7,
+  "n_states": 3,
   "features": [
     "log_return",
     "volatility",
@@ -8,9 +8,9 @@
     "momentum_5",
     "momentum_20"
   ],
-  "train_score": -8703.4643,
-  "val_score": -2217.0299,
+  "train_score": -9964.8459,
+  "val_score": -2342.1813,
   "train_start": "2016-04-21 00:00:00",
   "train_end": "2023-03-17 00:00:00",
-  "trained_at": "2026-03-09T01:13:13.164071+00:00"
+  "trained_at": "2026-03-18T00:38:14.925384+00:00"
 }

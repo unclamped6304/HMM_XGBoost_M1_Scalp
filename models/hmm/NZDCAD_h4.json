@@ -1,6 +1,6 @@
 {
   "name": "NZDCAD_h4",
-  "n_states": 7,
+  "n_states": 3,
   "features": [
     "log_return",
     "hl_range",
@@ -14,9 +14,9 @@
     "vol_trend",
     "price_pos"
   ],
-  "train_score": -107258.4172,
-  "val_score": -23689.4399,
+  "train_score": -121538.4342,
+  "val_score": -25851.5774,
   "train_start": "2016-03-24 04:00:00",
   "train_end": "2023-03-09 16:00:00",
-  "trained_at": "2026-03-09T01:11:51.701795+00:00"
+  "trained_at": "2026-03-18T00:37:47.541992+00:00"
 }
