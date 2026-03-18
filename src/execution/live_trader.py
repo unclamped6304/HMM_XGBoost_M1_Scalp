@@ -74,9 +74,10 @@ Path("logs").mkdir(exist_ok=True)
 
 
 def _setup_logging() -> None:
+    logging.Formatter.converter = time.gmtime   # %(asctime)s → UTC always
     logging.basicConfig(
         level=logging.INFO,
-        format="%(asctime)s  %(levelname)-8s  %(message)s",
+        format="%(asctime)s UTC  %(levelname)-8s  %(message)s",
         handlers=[
             logging.StreamHandler(),
             logging.FileHandler("logs/live_trader.log", encoding="utf-8"),
@@ -276,7 +277,7 @@ def _process_signals(
             # Live regime context
             regime_ctx = detector.get(symbol)
             if regime_ctx["pair_regime"] < 0:
-                logging.debug(f"[{symbol}] No regime — skipping")
+                logging.info(f"[{symbol}] No regime — skipping")
                 continue
 
             # Fetch enough bars for all rolling features
@@ -286,10 +287,16 @@ def _process_signals(
             sig = engine.predict_live(symbol, bars, regime_ctx)
 
             if sig["signal"] == "none":
+                logging.info(f"[{symbol}] No signal")
                 continue
             if sig["confidence"] < CONFIDENCE_THRESHOLD:
+                logging.info(
+                    f"[{symbol}] {sig['signal'].upper()} conf={sig['confidence']:.3f} "
+                    f"< threshold {CONFIDENCE_THRESHOLD} — skipping"
+                )
                 continue
             if sig["R"] <= 0:
+                logging.info(f"[{symbol}] {sig['signal'].upper()} R={sig['R']:.5f} <= 0 — skipping")
                 continue
 
             # Lot size
@@ -366,14 +373,14 @@ def run() -> None:
                         logging.info(
                             f"[friday-close] Market closing — closing all "
                             f"{len(open_positions)} position(s) at server "
-                            f"{server_now.strftime('%H:%M')}"
+                            f"{server_now.strftime('%H:%M %Z')}"
                         )
                         for pos in open_positions:
                             close_position(pos["ticket"])
                     else:
                         logging.info(
                             f"[rollover] Window opening at server "
-                            f"{server_now.strftime('%H:%M')} — widening stops"
+                            f"{server_now.strftime('%H:%M %Z')} — widening stops"
                         )
                         _widen_stops(open_positions, rollover_originals)
                     rollover_active = True
@@ -381,7 +388,7 @@ def run() -> None:
                 elif not in_rollover and rollover_active:
                     logging.info(
                         f"[rollover] Window closing at server "
-                        f"{server_now.strftime('%H:%M')} — restoring stops"
+                        f"{server_now.strftime('%H:%M %Z')} — restoring stops"
                     )
                     _restore_stops(open_positions, rollover_originals)
                     rollover_active = False
@@ -405,8 +412,8 @@ def run() -> None:
                 last_processed_hour = bar_index
                 logging.info(
                     f"[bar] {SIGNAL_TIMEFRAME.upper()} bar closed at "
-                    f"{now.strftime('%Y-%m-%d %H:%M UTC')} | "
-                    f"server={server_now.strftime('%H:%M')} | "
+                    f"{now.strftime('%Y-%m-%d %H:%M')} UTC | "
+                    f"server={server_now.strftime('%H:%M %Z')} | "
                     f"rollover={'YES' if in_rollover else 'no'}"
                 )
                 try:
