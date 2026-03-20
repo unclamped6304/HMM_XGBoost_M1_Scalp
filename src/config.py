@@ -47,7 +47,7 @@ CONFIDENCE_THRESHOLD = 0.70   # minimum XGBoost confidence to take a trade
 
 # ── Risk settings ─────────────────────────────────────────────────────────────
 RISK_PER_TRADE_PCT = 0.15     # % of account balance risked per trade (1R = this)
-MAX_OPEN_TRADES    = 7        # max simultaneous open positions across all pairs
+MAX_OPEN_TRADES    = 10       # max simultaneous open positions across all pairs
 MIN_HOLD_BARS      = 4        # minimum M15 bars before closing (prop firm rule, ~1h)
 MAX_HOLD_BARS      = 64       # maximum M15 bars before force-close (16h)
 
